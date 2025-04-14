@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "611086892183",
+    "project_id": "chronocourse-56a29",
+    "storage_bucket": "chronocourse-56a29.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:611086892183:android:b2df19b8a081fadad77dd2",
+        "android_client_info": {
+          "package_name": "com.example.chronocourse"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyANMAZNonZXvuZGGdS2iK4GAKWhfYxzjIw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

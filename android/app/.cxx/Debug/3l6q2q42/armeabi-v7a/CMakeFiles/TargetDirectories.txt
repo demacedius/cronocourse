@@ -1,0 +1,2 @@
+/Users/demacedoanthony/Desktop/cronocourse/android/app/.cxx/Debug/3l6q2q42/armeabi-v7a/CMakeFiles/edit_cache.dir
+/Users/demacedoanthony/Desktop/cronocourse/android/app/.cxx/Debug/3l6q2q42/armeabi-v7a/CMakeFiles/rebuild_cache.dir

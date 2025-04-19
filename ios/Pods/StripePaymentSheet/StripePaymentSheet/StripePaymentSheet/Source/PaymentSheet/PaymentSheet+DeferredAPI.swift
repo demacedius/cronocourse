@@ -29,7 +29,13 @@ extension PaymentSheet {
                 case let .saved(savedPaymentMethod, _):
                     paymentMethod = savedPaymentMethod
                 case let .new(params, paymentOptions, newPaymentMethod, shouldSave):
-                    assert(newPaymentMethod == nil)
+                    if let newPaymentMethod {
+                        let errorAnalytic = ErrorAnalytic(event: .unexpectedPaymentSheetConfirmationError,
+                                                          error: PaymentSheetError.unexpectedNewPaymentMethod,
+                                                          additionalNonPIIParams: ["payment_method_type": newPaymentMethod.type])
+                        STPAnalyticsClient.sharedClient.log(analytic: errorAnalytic)
+                    }
+                    stpAssert(newPaymentMethod == nil)
                     paymentMethod = try await configuration.apiClient.createPaymentMethod(with: params, additionalPaymentUserAgentValues: makeDeferredPaymentUserAgentValue(intentConfiguration: intentConfig))
                     confirmType = .new(params: params, paymentOptions: paymentOptions, paymentMethod: paymentMethod, shouldSave: shouldSave)
                 }
@@ -44,50 +50,52 @@ extension PaymentSheet {
                     return
                 }
 
+                // Overwrite `completion` to ensure we set the default if necessary before completing.
+                let completion = { (status: STPPaymentHandlerActionStatus, paymentOrSetupIntent: PaymentOrSetupIntent?, error: NSError?, deferredIntentConfirmationType: STPAnalyticsClient.DeferredIntentConfirmationType) in
+                    if let paymentOrSetupIntent {
+                        setDefaultPaymentMethodIfNecessary(actionStatus: status, intent: paymentOrSetupIntent, configuration: configuration)
+                    }
+                    completion(makePaymentSheetResult(for: status, error: error), deferredIntentConfirmationType)
+                }
+
                 // 3. Retrieve the PaymentIntent or SetupIntent
                 switch intentConfig.mode {
                 case .payment:
                     let paymentIntent = try await configuration.apiClient.retrievePaymentIntent(clientSecret: clientSecret, expand: ["payment_method"])
+
                     // Check if it needs confirmation
                     if [STPPaymentIntentStatus.requiresPaymentMethod, STPPaymentIntentStatus.requiresConfirmation].contains(paymentIntent.status) {
                         // 4a. Client-side confirmation
-                        try PaymentSheetDeferredValidator.validate(paymentIntent: paymentIntent, intentConfiguration: intentConfig, isFlowController: isFlowController)
-                        var paymentIntentParams = makePaymentIntentParams(
+                        try PaymentSheetDeferredValidator.validate(paymentIntent: paymentIntent, intentConfiguration: intentConfig, paymentMethod: paymentMethod, isFlowController: isFlowController)
+                        let paymentIntentParams = makePaymentIntentParams(
                             confirmPaymentMethodType: confirmType,
                             paymentIntent: paymentIntent,
                             configuration: configuration,
                             mandateData: mandateData
                         )
 
-                        // Dashboard specfic logic
-                        if configuration.apiClient.publishableKeyIsUserKey {
-                            paymentIntentParams = setParamsForDashboardApp(confirmType: confirmType,
-                                                                           paymentIntentParams: paymentIntentParams,
-                                                                           paymentIntent: paymentIntent,
-                                                                           configuration: configuration)
-                        }
-
                         paymentHandler.confirmPayment(
                             paymentIntentParams,
                             with: authenticationContext
-                        ) { status, _, error in
-                            completion(makePaymentSheetResult(for: status, error: error), .client)
+                        ) { status, paymentIntent, error in
+                            completion(status, paymentIntent.flatMap { PaymentOrSetupIntent.paymentIntent($0) }, error, .client)
                         }
                     } else {
                         // 4b. Server-side confirmation
+                        try PaymentSheetDeferredValidator.validatePaymentMethodId(paymentIntent: paymentIntent, paymentMethod: paymentMethod)
                         paymentHandler.handleNextAction(
                             for: paymentIntent,
                             with: authenticationContext,
                             returnURL: configuration.returnURL
-                        ) { status, _, error in
-                            completion(makePaymentSheetResult(for: status, error: error), .server)
+                        ) { status, paymentIntent, error in
+                            completion(status, paymentIntent.flatMap { PaymentOrSetupIntent.paymentIntent($0) }, error, .server)
                         }
                     }
                 case .setup:
                     let setupIntent = try await configuration.apiClient.retrieveSetupIntent(clientSecret: clientSecret, expand: ["payment_method"])
                     if [STPSetupIntentStatus.requiresPaymentMethod, STPSetupIntentStatus.requiresConfirmation].contains(setupIntent.status) {
                         // 4a. Client-side confirmation
-                        try PaymentSheetDeferredValidator.validate(setupIntent: setupIntent, intentConfiguration: intentConfig)
+                        try PaymentSheetDeferredValidator.validate(setupIntent: setupIntent, intentConfiguration: intentConfig, paymentMethod: paymentMethod)
                         let setupIntentParams = makeSetupIntentParams(
                             confirmPaymentMethodType: confirmType,
                             setupIntent: setupIntent,
@@ -97,17 +105,18 @@ extension PaymentSheet {
                         paymentHandler.confirmSetupIntent(
                             setupIntentParams,
                             with: authenticationContext
-                        ) { status, _, error in
-                            completion(makePaymentSheetResult(for: status, error: error), .client)
+                        ) { status, setupIntent, error in
+                            completion(status, setupIntent.flatMap { PaymentOrSetupIntent.setupIntent($0) }, error, .client)
                         }
                     } else {
                         // 4b. Server-side confirmation
+                        try PaymentSheetDeferredValidator.validatePaymentMethodId(setupIntent: setupIntent, paymentMethod: paymentMethod)
                         paymentHandler.handleNextAction(
                             for: setupIntent,
                             with: authenticationContext,
                             returnURL: configuration.returnURL
-                        ) { status, _, error in
-                            completion(makePaymentSheetResult(for: status, error: error), .server)
+                        ) { status, setupIntent, error in
+                            completion(status, setupIntent.flatMap { PaymentOrSetupIntent.setupIntent($0) }, error, .server)
                         }
                     }
                 }
@@ -156,33 +165,5 @@ extension PaymentSheet {
             paymentUserAgentValues.append("autopm")
         }
         return paymentUserAgentValues
-    }
-
-    static func setParamsForDashboardApp(confirmType: ConfirmPaymentMethodType,
-                                         paymentIntentParams: STPPaymentIntentParams,
-                                         paymentIntent: STPPaymentIntent,
-                                         configuration: PaymentSheet.Configuration) -> STPPaymentIntentParams {
-        var intentParamsCopy = paymentIntentParams
-        switch confirmType {
-        case .saved:
-            // The Dashboard app requires MOTO
-            intentParamsCopy.paymentMethodOptions = intentParamsCopy.paymentMethodOptions == nil ? .init() : intentParamsCopy.paymentMethodOptions
-            intentParamsCopy.paymentMethodOptions?.setMoto()
-        case .new(_, _, let paymentMethod, let shouldSave):
-            // The Dashboard app cannot pass `paymentMethodParams` ie payment_method_data
-            intentParamsCopy = IntentConfirmParams.makeDashboardParams(
-                paymentIntentClientSecret: paymentIntent.clientSecret,
-                paymentMethodID: paymentMethod?.stripeId ?? "",
-                shouldSave: shouldSave,
-                paymentMethodType: paymentMethod?.type ?? .unknown,
-                customer: configuration.customer
-            )
-            intentParamsCopy.shipping = makeShippingParams(
-                for: paymentIntent,
-                configuration: configuration
-            )
-        }
-
-        return intentParamsCopy
     }
 }

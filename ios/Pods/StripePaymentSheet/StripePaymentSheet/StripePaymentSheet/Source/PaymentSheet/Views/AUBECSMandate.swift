@@ -49,7 +49,7 @@ final class AUBECSLegalTermsView: UIView {
         fatalError("init(coder:) has not been implemented")
     }
 
-#if !STP_BUILD_FOR_VISION
+#if !canImport(CompositorServices)
     override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
         super.traitCollectionDidChange(previousTraitCollection)
         textView.font = .preferredFont(forTextStyle: .caption1)
@@ -62,25 +62,7 @@ final class AUBECSLegalTermsView: UIView {
             "Legal text shown when using AUBECS."
         )
         let string = String(format: template, configuration.merchantDisplayName)
-
-        let formattedString = NSMutableAttributedString()
-
-        STPStringUtils.parseRanges(from: string, withTags: Set<String>(links.keys)) { string, matches in
-            formattedString.append(NSAttributedString(string: string))
-
-            for (tag, range) in matches {
-                guard range.rangeValue.location != NSNotFound else {
-                    assertionFailure("Tag '<\(tag)>' not found")
-                    continue
-                }
-
-                if let url = links[tag] {
-                    formattedString.addAttributes([.link: url], range: range.rangeValue)
-                }
-            }
-        }
-
-        return formattedString
+        return STPStringUtils.applyLinksToString(template: string, links: links)
     }
 
 }

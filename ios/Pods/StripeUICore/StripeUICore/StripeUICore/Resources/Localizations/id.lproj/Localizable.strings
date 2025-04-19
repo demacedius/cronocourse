@@ -14,9 +14,13 @@
 
 "BSB number" = "Nomor BSB";
 
+"Bank account •••• %@" = "Rekening bank •••• %@";
+
 "Billing address is same as shipping" = "Alamat tagihan sama dengan pengiriman";
 
 "Cancel" = "Batalkan";
+
+"Card brand" = "Brand kartu";
 
 "City" = "Kota";
 
@@ -82,6 +86,8 @@
 
 "Phone" = "Telepon";
 
+"Phone number" = "Nomor telepon";
+
 "Postal code" = "Kode pos";
 
 "Prefecture" = "Prefektur";
@@ -90,13 +96,15 @@
 
 "Remove" = "Hapus";
 
-"Remove bank account" = "Hapus rekening bank";
+"Remove bank account?" = "Hapus rekening bank?";
 
-"Remove bank account ending in %@" = "Hapus rekening bank yang berakhiran dengan %@";
+"Remove card" = "Hapus kartu";
 
 "Search" = "Cari";
 
 "Select card brand (optional)" = "Pilih brand kartu (opsional)";
+
+"Sort code" = "Kode sort";
 
 "State" = "Negara Bagian";
 
@@ -109,6 +117,8 @@
 "The ID number you entered is incomplete." = "Nomor identifikasi yang Anda masukkan tidak lengkap.";
 
 "The account number you entered is incomplete." = "Nomor rekening yang Anda masukkan tidak lengkap.";
+
+"The sort code you entered is invalid." = "Kode sort yang Anda masukkan tidak valid.";
 
 "Town or city" = "Kabupaten atau kota";
 

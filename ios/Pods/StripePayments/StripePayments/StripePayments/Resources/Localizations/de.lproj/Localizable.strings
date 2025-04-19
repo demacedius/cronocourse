@@ -8,9 +8,9 @@
 
 "BLIK" = "BLIK";
 
-"Bancontact" = "Bancontact";
+"Bacs Direct Debit" = "BACS-Lastschriftverfahren";
 
-"Bank" = "Bank";
+"Bancontact" = "Bancontact";
 
 "Boleto" = "Boleto";
 
@@ -50,7 +50,7 @@
 
 "UPI" = "UPI";
 
-"US Bank Account" = "US-Bankkonto";
+"US bank account" = "US-Bankkonto";
 
 "Unknown" = "Unbekannt";
 

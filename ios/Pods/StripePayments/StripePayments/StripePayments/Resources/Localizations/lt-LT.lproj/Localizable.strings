@@ -8,9 +8,9 @@
 
 "BLIK" = "BLIK";
 
-"Bancontact" = "„Bancontact“";
+"Bacs Direct Debit" = "„Bacs“ tiesioginis debetas";
 
-"Bank" = "Bankas";
+"Bancontact" = "„Bancontact“";
 
 "Boleto" = "Boleto";
 
@@ -50,7 +50,7 @@
 
 "UPI" = "UPI";
 
-"US Bank Account" = "JAV banko sąskaita";
+"US bank account" = "JAV banko sąskaita";
 
 "Unknown" = "Nežinoma";
 

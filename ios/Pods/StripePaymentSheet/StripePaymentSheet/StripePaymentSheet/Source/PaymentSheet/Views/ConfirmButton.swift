@@ -37,11 +37,26 @@ class ConfirmButton: UIView {
     }
     enum CallToActionType {
         case pay(amount: Int, currency: String)
-        case add(paymentMethodType: PaymentSheet.PaymentMethodType)
+        case `continue`
         case setup
         case custom(title: String)
         case customWithLock(title: String)
 
+        static func makeDefaultTypeForPaymentSheet(intent: Intent) -> CallToActionType {
+            switch intent {
+            case .paymentIntent(let paymentIntent):
+                return .pay(amount: paymentIntent.amount, currency: paymentIntent.currency)
+            case .setupIntent:
+                return .setup
+            case .deferredIntent(let intentConfig):
+                switch intentConfig.mode {
+                case .payment(let amount, let currency, _, _):
+                    return .pay(amount: amount, currency: currency)
+                case .setup:
+                    return .setup
+                }
+            }
+        }
     }
 
     lazy var cornerRadius: CGFloat = appearance.primaryButton.cornerRadius ?? appearance.cornerRadius {
@@ -56,15 +71,6 @@ class ConfirmButton: UIView {
         }
         set {
             buyButton.font = newValue
-        }
-    }
-
-    var succeededBackgroundColor: UIColor {
-        get {
-            return buyButton.succeededBackgroundColor
-        }
-        set {
-            buyButton.succeededBackgroundColor = newValue
         }
     }
 
@@ -110,6 +116,7 @@ class ConfirmButton: UIView {
         // primaryButton.backgroundColor takes priority over appearance.colors.primary
         tintColor = appearance.primaryButton.backgroundColor ?? appearance.colors.primary
         layer.applyShadow(shadow: appearance.primaryButton.shadow?.asElementThemeShadow ?? appearance.shadow.asElementThemeShadow)
+        layer.shadowPath = UIBezierPath(roundedRect: bounds, cornerRadius: layer.cornerRadius).cgPath
         font = appearance.primaryButton.font ?? appearance.scaledFont(for: appearance.font.base.medium, style: .callout, maximumPointSize: 25)
         buyButton.titleLabel.sizeToFit()
         addAndPinSubview(applePayButton)
@@ -129,11 +136,7 @@ class ConfirmButton: UIView {
         fatalError("init(coder:) has not been implemented")
     }
 
-    override func layoutSubviews() {
-        super.layoutSubviews()
-    }
-
-#if !STP_BUILD_FOR_VISION
+#if !canImport(CompositorServices)
     override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
         super.traitCollectionDidChange(previousTraitCollection)
         self.buyButton.update(status: state, callToAction: callToAction, animated: false)
@@ -232,7 +235,9 @@ class ConfirmButton: UIView {
         }
 
         /// Background color for the `.succeeded` state.
-        var succeededBackgroundColor: UIColor = .systemGreen
+        var succeededBackgroundColor: UIColor {
+            return appearance.primaryButton.successBackgroundColor
+        }
 
         private static let minimumLabelHeight: CGFloat = 24
         private static let minimumButtonHeight: CGFloat = 44
@@ -299,13 +304,6 @@ class ConfirmButton: UIView {
         lazy var spinner: CheckProgressView = {
             return CheckProgressView(frame: CGRect(origin: .zero, size: spinnerSize))
         }()
-        lazy var addIcon: UIImageView = {
-            let image = Image.icon_plus.makeImage(template: true)
-            let icon = UIImageView(image: image)
-            icon.setContentCompressionResistancePriority(.required, for: .horizontal)
-            return icon
-        }()
-
         var foregroundColor: UIColor = .white {
             didSet {
                 foregroundColorDidChange()
@@ -324,7 +322,7 @@ class ConfirmButton: UIView {
             isAccessibilityElement = true
 
             // Add views
-            let views = ["titleLabel": titleLabel, "lockIcon": lockIcon, "spinnyView": spinner, "addIcon": addIcon]
+            let views = ["titleLabel": titleLabel, "lockIcon": lockIcon, "spinnyView": spinner]
             views.values.forEach {
                 $0.translatesAutoresizingMaskIntoConstraints = false
                 addSubview($0)
@@ -337,14 +335,10 @@ class ConfirmButton: UIView {
                 equalTo: centerXAnchor)
             titleLabelCenterXConstraint.priority = .defaultLow
             NSLayoutConstraint.activate([
-                // Add icon
-                addIcon.leadingAnchor.constraint(equalTo: layoutMarginsGuide.leadingAnchor),
-                addIcon.centerYAnchor.constraint(equalTo: centerYAnchor),
-
                 // Label
                 titleLabelCenterXConstraint,
                 titleLabel.centerYAnchor.constraint(equalTo: centerYAnchor),
-                titleLabel.leadingAnchor.constraint(greaterThanOrEqualTo: addIcon.trailingAnchor),
+                titleLabel.leadingAnchor.constraint(greaterThanOrEqualTo: layoutMarginsGuide.leadingAnchor),
 
                 // Lock icon
                 lockIcon.leadingAnchor.constraint(greaterThanOrEqualTo: titleLabel.trailingAnchor, constant: 8),
@@ -361,7 +355,7 @@ class ConfirmButton: UIView {
             overriddenForegroundColor = appearance.primaryButton.textColor
         }
 
-#if !STP_BUILD_FOR_VISION
+#if !canImport(CompositorServices)
         override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
             super.traitCollectionDidChange(previousTraitCollection)
             layer.borderColor = appearance.primaryButton.borderColor.cgColor
@@ -385,12 +379,8 @@ class ConfirmButton: UIView {
                 switch status {
                 case .enabled, .disabled, .spinnerWithInteractionDisabled:
                     switch callToAction {
-                    case .add(let paymentMethodType):
-                        if paymentMethodType == .stripe(.linkInstantDebit) {
-                            return STPLocalizedString("Add bank account", "Button prompt to add a bank account as a payment method.")
-                        } else {
-                            return String.Localized.continue
-                        }
+                    case .continue:
+                        return String.Localized.continue
                     case let .pay(amount, currency):
                         let localizedAmount = String.localizedAmountDisplayString(
                             for: amount, currency: currency)
@@ -421,18 +411,14 @@ class ConfirmButton: UIView {
 
             // Show/hide lock and add icons
             switch callToAction {
-            case .add(let paymentMethodType):
+            case .continue:
                 lockIcon.isHidden = true
-                addIcon.isHidden = paymentMethodType != .stripe(.linkInstantDebit)
             case .custom:
                 lockIcon.isHidden = true
-                addIcon.isHidden = true
             case .customWithLock:
                 lockIcon.isHidden = false
-                addIcon.isHidden = true
             case .pay, .setup:
                 lockIcon.isHidden = false
-                addIcon.isHidden = true
             }
 
             // Update accessibility information
@@ -492,11 +478,9 @@ class ConfirmButton: UIView {
                 switch status {
                 case .disabled, .enabled:
                     self.lockIcon.alpha = self.titleLabel.alpha
-                    self.addIcon.alpha = self.titleLabel.alpha
                     self.spinner.alpha = 0
                 case .processing, .spinnerWithInteractionDisabled:
                     self.lockIcon.alpha = 0
-                    self.addIcon.alpha = 0
                     self.spinner.alpha = 1
                     self.spinnerCenteredToLockConstraint.isActive = true
                     self.spinnerCenteredConstraint.isActive = false
@@ -536,9 +520,9 @@ class ConfirmButton: UIView {
         private func foregroundColor(for status: Status) -> UIColor {
             let background = backgroundColor(for: status)
 
-            if status == .succeeded {
-                // always use hardcoded color for foreground color when in success state
-                return .white
+            // Use successTextColor if in succeeded state and provided, otherwise fallback to foreground color
+            if status == .succeeded, let successTextColor = appearance.primaryButton.successTextColor {
+                return successTextColor
             }
 
             // if foreground is set prefer that over a dynamic constrasting color in all othe states
@@ -553,7 +537,6 @@ class ConfirmButton: UIView {
         private func foregroundColorDidChange() {
             titleLabel.textColor = foregroundColor
             lockIcon.tintColor = foregroundColor
-            addIcon.tintColor = foregroundColor
             spinner.color = foregroundColor
         }
     }
@@ -563,14 +546,15 @@ class ConfirmButton: UIView {
     class CheckProgressView: UIView {
         let circleLayer = CAShapeLayer()
         let checkmarkLayer = CAShapeLayer()
-
+        let baseLineWidth: CGFloat
         var color: UIColor = .white {
             didSet {
                 colorDidChange()
             }
         }
 
-        override init(frame: CGRect) {
+        init(frame: CGRect, baseLineWidth: CGFloat = 1.0) {
+            self.baseLineWidth = baseLineWidth
             // Circle
             let circlePath = UIBezierPath(
                 arcCenter: CGPoint(
@@ -585,7 +569,7 @@ class ConfirmButton: UIView {
             circleLayer.path = circlePath.cgPath
             circleLayer.fillColor = UIColor.clear.cgColor
             circleLayer.lineCap = .round
-            circleLayer.lineWidth = 1.0
+            circleLayer.lineWidth = baseLineWidth
             circleLayer.strokeEnd = 0.0
 
             // Checkmark
@@ -602,7 +586,7 @@ class ConfirmButton: UIView {
             checkmarkLayer.path = checkmarkPath.cgPath
             checkmarkLayer.lineCap = .round
             checkmarkLayer.fillColor = UIColor.clear.cgColor
-            checkmarkLayer.lineWidth = 1.5
+            checkmarkLayer.lineWidth = baseLineWidth + 0.5
             checkmarkLayer.strokeEnd = 0.0
 
             checkmarkLayer.position = CGPoint(x: frame.width / 2, y: frame.height / 2)
@@ -638,7 +622,14 @@ class ConfirmButton: UIView {
             circleLayer.add(rotationAnimation, forKey: "animateRotate")
         }
 
-        func completeProgress() {
+        func completeProgress(completion: (() -> Void)? = nil) {
+            CATransaction.begin()
+            // Note: Make sure the completion block is set before adding any animations
+            CATransaction.setCompletionBlock {
+                if let completion {
+                    completion()
+                }
+            }
             circleLayer.removeAnimation(forKey: "animateCircle")
 
             // Close the circle
@@ -661,6 +652,7 @@ class ConfirmButton: UIView {
             animation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.easeIn)
             checkmarkLayer.strokeEnd = 1.0
             checkmarkLayer.add(animation, forKey: "animateFinishCircle")
+            CATransaction.commit()
         }
 
         private func colorDidChange() {

@@ -13,7 +13,7 @@ protocol NativeFlowDataManager: AnyObject {
     var reducedBranding: Bool { get }
     var merchantLogo: [String]? { get }
     var returnURL: String? { get }
-    var consentPaneModel: FinancialConnectionsConsent { get }
+    var consentPaneModel: FinancialConnectionsConsent? { get }
     var apiClient: FinancialConnectionsAPIClient { get }
     var clientSecret: String { get }
     var analyticsClient: FinancialConnectionsAnalyticsClient { get }
@@ -23,25 +23,31 @@ protocol NativeFlowDataManager: AnyObject {
     var authSession: FinancialConnectionsAuthSession? { get set }
     var linkedAccounts: [FinancialConnectionsPartnerAccount]? { get set }
     var terminalError: Error? { get set }
+    var errorPaneError: Error? { get set }
+    var errorPaneReferrerPane: FinancialConnectionsSessionManifest.NextPane? { get set }
     var paymentAccountResource: FinancialConnectionsPaymentAccountResource? { get set }
     var accountNumberLast4: String? { get set }
     var consumerSession: ConsumerSessionData? { get set }
+    var consumerPublishableKey: String? { get set }
     var saveToLinkWithStripeSucceeded: Bool? { get set }
     var lastPaneLaunched: FinancialConnectionsSessionManifest.NextPane? { get set }
+    var customSuccessPaneCaption: String? { get set }
+    var customSuccessPaneSubCaption: String? { get set }
 
+    func createPaymentDetails(
+        consumerSessionClientSecret: String,
+        bankAccountId: String
+    ) -> Future<FinancialConnectionsPaymentDetails>
+    func createPaymentMethod(
+        consumerSessionClientSecret: String,
+        paymentDetailsId: String
+    ) -> Future<FinancialConnectionsPaymentMethod>
     func resetState(withNewManifest newManifest: FinancialConnectionsSessionManifest)
     func completeFinancialConnectionsSession(terminalError: String?) -> Future<StripeAPI.FinancialConnectionsSession>
 }
 
 class NativeFlowAPIDataManager: NativeFlowDataManager {
 
-    private lazy var consentCombinedLogoExperiment: ExperimentHelper = {
-        return ExperimentHelper(
-            experimentName: "connections_consent_combined_logo",
-            manifest: manifest,
-            analyticsClient: analyticsClient
-        )
-    }()
     var manifest: FinancialConnectionsSessionManifest {
         didSet {
             didUpdateManifest()
@@ -54,21 +60,16 @@ class NativeFlowAPIDataManager: NativeFlowDataManager {
         return visualUpdate.reducedBranding
     }
     var merchantLogo: [String]? {
-        if consentCombinedLogoExperiment.isEnabled(logExposure: true) {
-            let merchantLogo = visualUpdate.merchantLogo
-            if merchantLogo.isEmpty || merchantLogo.count == 2 || merchantLogo.count == 3 {
-                // show merchant logo inside of consent pane
-                return visualUpdate.merchantLogo
-            } else {
-                // if `merchantLogo.count > 3`, that is an invalid case
-                //
-                // we want to log experiment exposure regardless because
-                // if experiment is not working fine (ex. returns 1 or 4 logos)
-                // then the "cost" of those bugs should show up in the `treatment` data
-                return nil
-            }
+        let merchantLogo = visualUpdate.merchantLogo
+        if merchantLogo.isEmpty || merchantLogo.count == 2 || merchantLogo.count == 3 {
+            // show merchant logo inside of consent pane
+            return visualUpdate.merchantLogo
         } else {
-            // show the "control" experience of showing logo in the nav bar
+            // if `merchantLogo.count > 3`, that is an invalid case
+            //
+            // we want to log experiment exposure regardless because
+            // if experiment is not working fine (ex. returns 1 or 4 logos)
+            // then the "cost" of those bugs should show up in the `treatment` data
             return nil
         }
     }
@@ -76,7 +77,7 @@ class NativeFlowAPIDataManager: NativeFlowDataManager {
         return visualUpdate.reduceManualEntryProminenceInErrors
     }
     let returnURL: String?
-    let consentPaneModel: FinancialConnectionsConsent
+    let consentPaneModel: FinancialConnectionsConsent?
     let apiClient: FinancialConnectionsAPIClient
     let clientSecret: String
     let analyticsClient: FinancialConnectionsAnalyticsClient
@@ -85,17 +86,32 @@ class NativeFlowAPIDataManager: NativeFlowDataManager {
     var authSession: FinancialConnectionsAuthSession?
     var linkedAccounts: [FinancialConnectionsPartnerAccount]?
     var terminalError: Error?
+    var errorPaneError: Error?
+    var errorPaneReferrerPane: FinancialConnectionsSessionManifest.NextPane?
     var paymentAccountResource: FinancialConnectionsPaymentAccountResource?
     var accountNumberLast4: String?
-    var consumerSession: ConsumerSessionData?
     var saveToLinkWithStripeSucceeded: Bool?
     var lastPaneLaunched: FinancialConnectionsSessionManifest.NextPane?
+    var customSuccessPaneCaption: String?
+    var customSuccessPaneSubCaption: String?
+
+    var consumerSession: ConsumerSessionData? {
+        didSet {
+            apiClient.consumerSession = consumerSession
+        }
+    }
+
+    var consumerPublishableKey: String? {
+        didSet {
+            apiClient.consumerPublishableKey = consumerPublishableKey
+        }
+    }
 
     init(
         manifest: FinancialConnectionsSessionManifest,
         visualUpdate: FinancialConnectionsSynchronize.VisualUpdate,
         returnURL: String?,
-        consentPaneModel: FinancialConnectionsConsent,
+        consentPaneModel: FinancialConnectionsConsent?,
         apiClient: FinancialConnectionsAPIClient,
         clientSecret: String,
         analyticsClient: FinancialConnectionsAnalyticsClient
@@ -112,6 +128,26 @@ class NativeFlowAPIDataManager: NativeFlowDataManager {
         // If the server returns active institution use that, otherwise resort to initial institution.
         self.institution = manifest.activeInstitution ?? manifest.initialInstitution
         didUpdateManifest()
+    }
+
+    func createPaymentDetails(
+        consumerSessionClientSecret: String,
+        bankAccountId: String
+    ) -> Future<FinancialConnectionsPaymentDetails> {
+        apiClient.paymentDetails(
+            consumerSessionClientSecret: consumerSessionClientSecret,
+            bankAccountId: bankAccountId
+        )
+    }
+
+    func createPaymentMethod(
+        consumerSessionClientSecret: String,
+        paymentDetailsId: String
+    ) -> Future<FinancialConnectionsPaymentMethod> {
+        apiClient.paymentMethods(
+            consumerSessionClientSecret: consumerSessionClientSecret,
+            paymentDetailsId: paymentDetailsId
+        )
     }
 
     func completeFinancialConnectionsSession(terminalError: String?) -> Future<StripeAPI.FinancialConnectionsSession> {
@@ -131,6 +167,7 @@ class NativeFlowAPIDataManager: NativeFlowDataManager {
     }
 
     private func didUpdateManifest() {
+        apiClient.isLinkWithStripe = manifest.isLinkWithStripe == true
         analyticsClient.setAdditionalParameters(fromManifest: manifest)
     }
 }

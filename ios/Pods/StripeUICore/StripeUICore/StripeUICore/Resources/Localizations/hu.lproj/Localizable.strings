@@ -14,9 +14,13 @@
 
 "BSB number" = "BSB-szám";
 
+"Bank account •••• %@" = "Bankszámla •••• %@";
+
 "Billing address is same as shipping" = "A számlázási cím megegyezik a szállítási címmel";
 
 "Cancel" = "Mégse";
+
+"Card brand" = "Kártyatípus";
 
 "City" = "Város";
 
@@ -82,6 +86,8 @@
 
 "Phone" = "Telefon";
 
+"Phone number" = "Telefonszám";
+
 "Postal code" = "Irányítószám";
 
 "Prefecture" = "Prefektúra";
@@ -90,13 +96,15 @@
 
 "Remove" = "Eltávolítás";
 
-"Remove bank account" = "Bankszámla eltávolítása";
+"Remove bank account?" = "Eltávolítja a bankszámlát?";
 
-"Remove bank account ending in %@" = "%@ számra végződő bankszámla eltávolítása";
+"Remove card" = "Kártya törlése";
 
 "Search" = "Keresés";
 
 "Select card brand (optional)" = "Válassza ki a kártya márkáját (nem kötelező)";
+
+"Sort code" = "Bankazonosító";
 
 "State" = "Állam";
 
@@ -109,6 +117,8 @@
 "The ID number you entered is incomplete." = "A beírt azonosítószám hiányos.";
 
 "The account number you entered is incomplete." = "A számlaszám hiányos.";
+
+"The sort code you entered is invalid." = "A beírt bankazonosító érvénytelen.";
 
 "Town or city" = "Kisváros vagy város";
 

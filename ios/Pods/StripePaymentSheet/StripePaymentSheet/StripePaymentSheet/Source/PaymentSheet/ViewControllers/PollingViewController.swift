@@ -25,18 +25,15 @@ class PollingViewController: UIViewController {
     // MARK: State
 
     private var oneSecondTimer: Timer?
-    private let currentAction: STPPaymentHandlerActionParams
+    private let currentAction: STPPaymentHandlerPaymentIntentActionParams
     private let appearance: PaymentSheet.Appearance
     private let viewModel: PollingViewModel
     private let safariViewController: SFSafariViewController?
 
     private lazy var intentPoller: IntentStatusPoller = {
-        guard let currentAction = currentAction as? STPPaymentHandlerPaymentIntentActionParams,
-              let clientSecret = currentAction.paymentIntent?.clientSecret else { fatalError() }
-
         let intentPoller = IntentStatusPoller(retryInterval: viewModel.retryInterval,
                                               intentRetriever: currentAction.apiClient,
-                                              clientSecret: clientSecret)
+                                              clientSecret: currentAction.paymentIntent.clientSecret)
         intentPoller.delegate = self
         return intentPoller
     }()
@@ -162,7 +159,7 @@ class PollingViewController: UIViewController {
 
     // MARK: Overrides
 
-    init(currentAction: STPPaymentHandlerActionParams, viewModel: PollingViewModel, appearance: PaymentSheet.Appearance, safariViewController: SFSafariViewController? = nil) {
+    init(currentAction: STPPaymentHandlerPaymentIntentActionParams, viewModel: PollingViewModel, appearance: PaymentSheet.Appearance, safariViewController: SFSafariViewController? = nil) {
         self.currentAction = currentAction
         self.appearance = appearance
         self.viewModel = viewModel
@@ -180,7 +177,7 @@ class PollingViewController: UIViewController {
         // disable swipe to dismiss
         isModalInPresentation = true
 
-        #if STP_BUILD_FOR_VISION
+        #if canImport(CompositorServices)
         let height = parent?.view.frame.size.height ?? 600 // An arbitrary value for visionOS
         #else
         // Height of the polling view controller is either the height of the parent, or the height of the screen (flow controller use case)
@@ -214,8 +211,8 @@ class PollingViewController: UIViewController {
                                   repeats: true)
         }
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
-            self.intentPoller.beginPolling()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5) { [weak self] in
+            self?.intentPoller.beginPolling()
         }
 
         NotificationCenter.default.addObserver(self, selector: #selector(didEnterBackground), name: UIApplication.didEnterBackgroundNotification, object: nil)
@@ -283,7 +280,7 @@ class PollingViewController: UIViewController {
             self.cancelButton.isHidden = true
             self.titleLabel.text = .Localized.payment_failed
             self.instructionLabel.text = .Localized.please_go_back
-            self.navigationBar.setStyle(.back)
+            self.navigationBar.setStyle(.back(showAdditionalButton: false))
             self.intentPoller.suspendPolling()
             self.oneSecondTimer?.invalidate()
 
@@ -347,16 +344,11 @@ extension PollingViewController: SheetNavigationBarDelegate {
 
 extension PollingViewController: IntentStatusPollerDelegate {
     func didUpdate(paymentIntent: STPPaymentIntent) {
-        guard let currentAction = currentAction as? STPPaymentHandlerPaymentIntentActionParams else { return }
-
         if paymentIntent.status == .succeeded {
             setErrorStateWorkItem.cancel() // cancel the error work item incase it was scheduled
             currentAction.paymentIntent = paymentIntent // update the local copy of the intent with the latest from the server
             dismiss {
-                // Wait a short amount of time before completing the action to ensure smooth animations
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                    self.currentAction.complete(with: .succeeded, error: nil)
-                }
+                self.currentAction.complete(with: .succeeded, error: nil)
             }
         } else if paymentIntent.status != .requiresAction {
             // an error occured to take the intent out of requires action

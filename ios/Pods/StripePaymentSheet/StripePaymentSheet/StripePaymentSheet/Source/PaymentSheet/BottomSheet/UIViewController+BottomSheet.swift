@@ -15,7 +15,7 @@ extension UIViewController {
         completion: (() -> Void)? = nil
     ) {
         var presentAsFormSheet: Bool {
-            #if STP_BUILD_FOR_VISION
+            #if canImport(CompositorServices)
             return true
             #else
             // Present as form sheet in larger devices (iPad/Mac).
@@ -29,6 +29,8 @@ extension UIViewController {
 
         if presentAsFormSheet {
             viewControllerToPresent.modalPresentationStyle = .formSheet
+            // Don't allow the pull down to dismiss gesture, it's too easy to trigger accidentally while scrolling
+            viewControllerToPresent.isModalInPresentation = true
             if let vc = viewControllerToPresent as? BottomSheetViewController {
                 viewControllerToPresent.presentationController?.delegate = vc
             }

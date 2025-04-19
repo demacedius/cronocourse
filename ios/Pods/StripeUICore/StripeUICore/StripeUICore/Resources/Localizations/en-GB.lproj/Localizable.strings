@@ -14,9 +14,13 @@
 
 "BSB number" = "BSB number";
 
+"Bank account •••• %@" = "Bank account •••• %@";
+
 "Billing address is same as shipping" = "Billing address is same as shipping";
 
 "Cancel" = "Cancel";
+
+"Card brand" = "Card brand";
 
 "City" = "City";
 
@@ -82,6 +86,8 @@
 
 "Phone" = "Phone";
 
+"Phone number" = "Phone number";
+
 "Postal code" = "Postcode";
 
 "Prefecture" = "Prefecture";
@@ -90,13 +96,15 @@
 
 "Remove" = "Remove";
 
-"Remove bank account" = "Remove bank account";
+"Remove bank account?" = "Remove bank account?";
 
-"Remove bank account ending in %@" = "Remove bank account ending in %@";
+"Remove card" = "Remove card";
 
 "Search" = "Search";
 
 "Select card brand (optional)" = "Select card brand (optional)";
+
+"Sort code" = "Sort code";
 
 "State" = "State";
 
@@ -109,6 +117,8 @@
 "The ID number you entered is incomplete." = "The ID number you entered is incomplete.";
 
 "The account number you entered is incomplete." = "The account number you entered is incomplete.";
+
+"The sort code you entered is invalid." = "The sort code you entered is invalid.";
 
 "Town or city" = "Town or city";
 

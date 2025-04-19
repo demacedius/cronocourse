@@ -34,40 +34,55 @@ public extension PaymentSheet {
             _ intentCreationCallback: @escaping ((Result<String, Error>) -> Void)
         ) -> Void
 
-        public typealias CVCRecollectionEnabledCallback = () -> Bool
+        /// Creates a `PaymentSheet.IntentConfiguration` with the given values
+        /// - Parameters:
+        ///   - mode: The mode of this intent, either payment or setup
+        ///   - paymentMethodTypes: The payment method types for the intent
+        ///   - onBehalfOf: The account (if any) for which the funds of the intent are intended
+        ///   - paymentMethodConfigurationId: Configuration ID (if any) for the selected payment method configuration
+        ///   - confirmHandler: A handler called with payment details when the user taps the primary button (e.g. the "Pay" or "Continue" button).
+        public init(mode: Mode,
+                    paymentMethodTypes: [String]? = nil,
+                    onBehalfOf: String? = nil,
+                    paymentMethodConfigurationId: String? = nil,
+                    confirmHandler: @escaping ConfirmHandler) {
+            self.mode = mode
+            self.paymentMethodTypes = paymentMethodTypes
+            self.onBehalfOf = onBehalfOf
+            self.paymentMethodConfigurationId = paymentMethodConfigurationId
+            self.confirmHandler = confirmHandler
+            self.requireCVCRecollection = false
+            validate()
+        }
 
         /// Creates a `PaymentSheet.IntentConfiguration` with the given values
         /// - Parameters:
         ///   - mode: The mode of this intent, either payment or setup
         ///   - paymentMethodTypes: The payment method types for the intent
         ///   - onBehalfOf: The account (if any) for which the funds of the intent are intended
+        ///   - paymentMethodConfigurationId: Configuration ID (if any) for the selected payment method configuration
         ///   - confirmHandler: A handler called with payment details when the user taps the primary button (e.g. the "Pay" or "Continue" button).
-        public init(mode: Mode,
-                    paymentMethodTypes: [String]? = nil,
-                    onBehalfOf: String? = nil,
-                    confirmHandler: @escaping ConfirmHandler) {
-            self.mode = mode
-            self.paymentMethodTypes = paymentMethodTypes
-            self.onBehalfOf = onBehalfOf
-            self.confirmHandler = confirmHandler
-            self.isCVCRecollectionEnabledCallback = { return false }
-        }
-
+        ///   - requireCVCRecollection: If true, PaymentSheet recollects CVC for saved cards before confirmation (PaymentIntent only)
         @_spi(EarlyAccessCVCRecollectionFeature)
         public init(mode: Mode,
                     paymentMethodTypes: [String]? = nil,
                     onBehalfOf: String? = nil,
+                    paymentMethodConfigurationId: String? = nil,
                     confirmHandler: @escaping ConfirmHandler,
-                    isCVCRecollectionEnabledCallback: CVCRecollectionEnabledCallback? = nil) {
+                    requireCVCRecollection: Bool = false) {
             self.mode = mode
             self.paymentMethodTypes = paymentMethodTypes
             self.onBehalfOf = onBehalfOf
+            self.paymentMethodConfigurationId = paymentMethodConfigurationId
             self.confirmHandler = confirmHandler
-            self.isCVCRecollectionEnabledCallback = isCVCRecollectionEnabledCallback ?? { return false }
+            self.requireCVCRecollection = requireCVCRecollection
+            validate()
         }
 
         /// Information about the payment (PaymentIntent) or setup (SetupIntent).
-        public var mode: Mode
+        public var mode: Mode {
+            didSet { validate() }
+        }
 
         /// A list of payment method types to display to the customer. If nil, we dynamically determine the payment methods using your Stripe Dashboard settings.
         public var paymentMethodTypes: [String]?
@@ -80,13 +95,15 @@ public extension PaymentSheet {
         /// - Seealso: https://stripe.com/docs/api/payment_intents/object#payment_intent_object-on_behalf_of
         public var onBehalfOf: String?
 
-        /// A callback that controls when to recollect the CVC for saved cards
-        /// In the case of client-side confirmation, the CVC/CVV value will be
-        /// sent with the confirmation of the payment intent within payment_method_options.
-        ///
-        /// Note: Only supported for PaymentSheet.FlowController integrations that use client-side confirmation
+        /// Optional configuration ID for the selected payment method configuration.
+        /// See https://stripe.com/docs/payments/multiple-payment-method-configs for more information.
+        public var paymentMethodConfigurationId: String?
+
+        /// If true, PaymentSheet recollects CVC for saved cards before confirmation (PaymentIntents only)
+        ///  - Seealso: https://docs.stripe.com/payments/accept-a-payment-deferred?platform=ios&type=payment#ios-cvc-recollection
+        ///  - Note: Server-side confirmation is not supported.
         @_spi(EarlyAccessCVCRecollectionFeature)
-        public var isCVCRecollectionEnabledCallback: CVCRecollectionEnabledCallback
+        public var requireCVCRecollection: Bool
 
         /// Controls when the funds will be captured. 
         /// - Seealso: https://stripe.com/docs/api/payment_intents/create#create_payment_intent-capture_method
@@ -139,6 +156,8 @@ public extension PaymentSheet {
             )
         }
 
+        // MARK: - Internal
+
         /// An async version of `ConfirmHandler`.
         typealias AsyncConfirmHandler = (
             _ paymentMethod: STPPaymentMethod,
@@ -166,7 +185,17 @@ public extension PaymentSheet {
                 }
             }
             // TODO
-            self.isCVCRecollectionEnabledCallback = { return false }
+            self.requireCVCRecollection = false
+        }
+
+        @discardableResult
+        func validate() -> Error? {
+            let errorMessage: String
+            if case .payment(let amount, _, _, _) = mode, amount <= 0 {
+                errorMessage = "The amount in `PaymentSheet.IntentConfiguration` must be non-zero! See https://docs.stripe.com/api/payment_intents/create#create_payment_intent-amount"
+                return PaymentSheetError.intentConfigurationValidationFailed(message: errorMessage)
+            }
+            return nil
         }
     }
 }

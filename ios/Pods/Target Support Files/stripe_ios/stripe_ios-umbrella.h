@@ -10,8 +10,8 @@
 #endif
 #endif
 
+#import "stripe_objc-umbrella.h"
 #import "RCTBridge.h"
-#import "StripeIosPlugin.h"
 
 FOUNDATION_EXPORT double stripe_iosVersionNumber;
 FOUNDATION_EXPORT const unsigned char stripe_iosVersionString[];

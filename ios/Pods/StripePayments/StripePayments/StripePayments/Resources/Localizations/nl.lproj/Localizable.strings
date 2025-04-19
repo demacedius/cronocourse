@@ -8,9 +8,9 @@
 
 "BLIK" = "BLIK";
 
-"Bancontact" = "Bancontact";
+"Bacs Direct Debit" = "Automatische BACS-incasso";
 
-"Bank" = "Bank";
+"Bancontact" = "Bancontact";
 
 "Boleto" = "Boleto";
 
@@ -50,7 +50,7 @@
 
 "UPI" = "UPI";
 
-"US Bank Account" = "Amerikaanse bankrekening";
+"US bank account" = "Amerikaanse bankrekening";
 
 "Unknown" = "Onbekend";
 

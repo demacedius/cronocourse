@@ -19,6 +19,10 @@ protocol PaymentMethodTypeCollectionViewDelegate: AnyObject {
 /// For internal SDK use only
 @objc(STP_Internal_PaymentMethodTypeCollectionView)
 class PaymentMethodTypeCollectionView: UICollectionView {
+    enum Error: Swift.Error {
+        case unableToDequeueReusableCell
+    }
+
     // MARK: - Constants
     internal static let paymentMethodLogoSize: CGSize = CGSize(width: UIView.noIntrinsicMetric, height: 12)
     internal static let cellHeight: CGFloat = 52
@@ -34,17 +38,15 @@ class PaymentMethodTypeCollectionView: UICollectionView {
     }
     let paymentMethodTypes: [PaymentSheet.PaymentMethodType]
     let appearance: PaymentSheet.Appearance
-    let isPaymentSheet: Bool
     weak var _delegate: PaymentMethodTypeCollectionViewDelegate?
 
     init(
         paymentMethodTypes: [PaymentSheet.PaymentMethodType],
         initialPaymentMethodType: PaymentSheet.PaymentMethodType? = nil,
         appearance: PaymentSheet.Appearance,
-        isPaymentSheet: Bool = false,
         delegate: PaymentMethodTypeCollectionViewDelegate
     ) {
-        assert(!paymentMethodTypes.isEmpty, "At least one payment method type must be provided.")
+        stpAssert(!paymentMethodTypes.isEmpty, "At least one payment method type must be provided.")
 
         self.paymentMethodTypes = paymentMethodTypes
         self._delegate = delegate
@@ -57,7 +59,6 @@ class PaymentMethodTypeCollectionView: UICollectionView {
         }()
         self.selected = paymentMethodTypes[selectedItemIndex]
         self.appearance = appearance
-        self.isPaymentSheet = isPaymentSheet
         let layout = UICollectionViewFlowLayout()
         layout.scrollDirection = .horizontal
         layout.sectionInset = UIEdgeInsets(
@@ -106,7 +107,10 @@ extension PaymentMethodTypeCollectionView: UICollectionViewDataSource, UICollect
                 as? PaymentMethodTypeCollectionView.PaymentTypeCell,
             let appearance = (collectionView as? PaymentMethodTypeCollectionView)?.appearance
         else {
-            assertionFailure()
+            let errorAnalytic = ErrorAnalytic(event: .unexpectedPaymentSheetError,
+                                              error: Error.unableToDequeueReusableCell)
+            STPAnalyticsClient.sharedClient.log(analytic: errorAnalytic)
+            stpAssertionFailure()
             return UICollectionViewCell()
         }
         cell.paymentMethodType = paymentMethodTypes[indexPath.item]
@@ -117,17 +121,11 @@ extension PaymentMethodTypeCollectionView: UICollectionViewDataSource, UICollect
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         collectionView.scrollToItem(at: indexPath, at: .centeredHorizontally, animated: true)
         selected = paymentMethodTypes[indexPath.item]
-
-        // Only log this event when this collection view is being used by PaymentSheet
-        if isPaymentSheet {
-            STPAnalyticsClient.sharedClient.logPaymentSheetEvent(event: .paymentSheetCarouselPaymentMethodTapped,
-                                                                 paymentMethodTypeAnalyticsValue: paymentMethodTypes[indexPath.row].identifier)
-        }
     }
 
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
         var useFixedSizeCells: Bool {
-            #if STP_BUILD_FOR_VISION
+            #if canImport(CompositorServices)
             return true
             #else
             // Prefer fixed size cells for iPads and Mac.
@@ -185,11 +183,7 @@ extension PaymentMethodTypeCollectionView {
             return paymentMethodLogo
         }()
         private lazy var shadowRoundedRectangle: ShadowedRoundedRectangle = {
-            let shadowRoundedRectangle = ShadowedRoundedRectangle(appearance: appearance)
-            shadowRoundedRectangle.layer.borderWidth = 1
-            shadowRoundedRectangle.layoutMargins = UIEdgeInsets(
-                top: 15, left: 24, bottom: 15, right: 24)
-            return shadowRoundedRectangle
+            return ShadowedRoundedRectangle(appearance: appearance)
         }()
         lazy var paymentMethodLogoWidthConstraint: NSLayoutConstraint = {
             paymentMethodLogo.widthAnchor.constraint(equalToConstant: 0)
@@ -259,7 +253,7 @@ extension PaymentMethodTypeCollectionView {
             fatalError("init(coder:) has not been implemented")
         }
 
-        #if !STP_BUILD_FOR_VISION
+        #if !canImport(CompositorServices)
         override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
             super.traitCollectionDidChange(previousTraitCollection)
             update()
@@ -279,8 +273,10 @@ extension PaymentMethodTypeCollectionView {
                 switch event {
                 case .shouldDisableUserInteraction:
                     self.label.alpha = 0.6
+                    self.paymentMethodLogo.alpha = 0.6
                 case .shouldEnableUserInteraction:
                     self.label.alpha = 1
+                    self.paymentMethodLogo.alpha = 1
                 default:
                     break
                 }
@@ -288,6 +284,7 @@ extension PaymentMethodTypeCollectionView {
         }
 
         // MARK: - Private Methods
+        var paymentMethodTypeOfCurrentImage: PaymentSheet.PaymentMethodType = .stripe(.unknown)
         private func update() {
             contentView.layer.cornerRadius = appearance.cornerRadius
             shadowRoundedRectangle.appearance = appearance
@@ -296,41 +293,35 @@ extension PaymentMethodTypeCollectionView {
             label.font = appearance.scaledFont(for: appearance.font.base.medium, style: .footnote, maximumPointSize: 20)
             let currPaymentMethodType = self.paymentMethodType
             let image = paymentMethodType.makeImage(forDarkBackground: appearance.colors.componentBackground.contrastingColor == .white) { [weak self] image in
-                guard let strongSelf = self,
-                      currPaymentMethodType == strongSelf.paymentMethodType else {
-                    return
-                }
                 DispatchQueue.main.async {
-                    strongSelf.updateImage(image)
+                    guard let self, currPaymentMethodType == self.paymentMethodType else {
+                        return
+                    }
+                    // Keep track of the PM type of the image
+                    self.paymentMethodTypeOfCurrentImage = currPaymentMethodType
+                    self.updateImage(image)
                 }
             }
-            updateImage(image)
-
-            if isSelected {
-                // Set text color
-                label.textColor = appearance.colors.primary
-
-                // Set border
-                shadowRoundedRectangle.layer.borderWidth = appearance.borderWidth * 2
-                shadowRoundedRectangle.layer.borderColor = appearance.colors.primary.cgColor
-            } else {
-                // Set text color
-                label.textColor = appearance.colors.componentText
-
-                // Set border
-                shadowRoundedRectangle.layer.borderWidth = appearance.borderWidth
-                shadowRoundedRectangle.layer.borderColor = appearance.colors.componentBorder.cgColor
+            // Hacky workaround: If we update unconditionally, we'll overwrite the current PM's valid image with a 1x1 placeholder here
+            // until it gets overwritten again when the image download completion block runs.
+            // Ideally, the DownloadManager API is refactored to not return a placeholder or an image; then we can set the image to a placeholder only when the payment method type of this cell changes.
+            if paymentMethodTypeOfCurrentImage != self.paymentMethodType || image.size != CGSize(width: 1, height: 1) {
+                updateImage(image)
             }
+
+            shadowRoundedRectangle.isSelected = isSelected
+            // Set text color
+            label.textColor = appearance.colors.componentText
             accessibilityLabel = label.text
             accessibilityTraits = isSelected ? [.selected] : []
             accessibilityIdentifier = paymentMethodType.identifier
         }
         private func updateImage(_ imageParam: UIImage) {
             var image = imageParam
-            // tint icon primary color for a few PMs should be tinted the appearance primary color when selected
+            // tint icon for a few PMs to be a contrasting color to the component background
             if paymentMethodType.iconRequiresTinting  {
                 image = image.withRenderingMode(.alwaysTemplate)
-                paymentMethodLogo.tintColor = isSelected ? appearance.colors.primary : appearance.colors.componentBackground.contrastingColor
+                paymentMethodLogo.tintColor = appearance.colors.componentBackground.contrastingColor
             }
 
             paymentMethodLogo.image = image

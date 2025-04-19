@@ -61,7 +61,6 @@ extension CustomerSheet {
 
         /// The list of preferred networks that should be used to process payments made with a co-branded card.
         /// This value will only be used if your user hasn't selected a network themselves.
-        @_spi(STP) // TODO(porter) Remove STP before CBC GA
         public var preferredNetworks: [STPCardBrand]? {
             didSet {
                 guard let preferredNetworks = preferredNetworks else { return }
@@ -70,8 +69,10 @@ extension CustomerSheet {
             }
         }
 
-        // TODO(porter) Remove for CBC GA
-        @_spi(STP) public var cbcEnabled: Bool = false
+        /// This is an experimental feature that may be removed at any time.
+        /// If true (the default), the customer can delete all saved payment methods.
+        /// If false, the customer can't delete if they only have one saved payment method remaining.
+        @_spi(STP) public var allowsRemovalOfLastSavedPaymentMethod = true
 
         public init () {
         }
@@ -124,5 +125,14 @@ extension CustomerSheet {
                 return .stripeId(paymentMethod.stripeId)
             }
         }
+    }
+}
+
+extension CustomerSheet.Configuration {
+    func isUsingBillingAddressCollection() -> Bool {
+        return billingDetailsCollectionConfiguration.name == .always
+        || billingDetailsCollectionConfiguration.phone == .always
+        || billingDetailsCollectionConfiguration.email == .always
+        || billingDetailsCollectionConfiguration.address == .full
     }
 }

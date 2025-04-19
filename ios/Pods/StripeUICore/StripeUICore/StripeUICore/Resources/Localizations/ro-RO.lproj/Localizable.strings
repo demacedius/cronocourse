@@ -14,9 +14,13 @@
 
 "BSB number" = "Număr BSB";
 
+"Bank account •••• %@" = "Cont bancar •••• %@";
+
 "Billing address is same as shipping" = "Adresa de facturare este la fel cu cea de expediere";
 
 "Cancel" = "Anulare";
+
+"Card brand" = "Marcă card";
 
 "City" = "Oraș";
 
@@ -82,6 +86,8 @@
 
 "Phone" = "Număr de telefon";
 
+"Phone number" = "Număr de telefon";
+
 "Postal code" = "Cod poștal";
 
 "Prefecture" = "Prefectură";
@@ -90,13 +96,15 @@
 
 "Remove" = "Eliminare";
 
-"Remove bank account" = "Eliminați contul bancar";
+"Remove bank account?" = "Eliminați contul bancar?";
 
-"Remove bank account ending in %@" = "Eliminați contul bancar care se termină în %@";
+"Remove card" = "Eliminare card";
 
 "Search" = "Căutare";
 
 "Select card brand (optional)" = "Selectare marcă card (opțional)";
+
+"Sort code" = "Cod de sortare";
 
 "State" = "Stat";
 
@@ -109,6 +117,8 @@
 "The ID number you entered is incomplete." = "Numărul de identificare pe care l-ați introdus nu este complet.";
 
 "The account number you entered is incomplete." = "Numărul de cont pe care l-ați introdus nu este complet.";
+
+"The sort code you entered is invalid." = "Codul de identificare a băncii pe care l-ați introdus nu este valid.";
 
 "Town or city" = "Municipalitate sau oraș";
 

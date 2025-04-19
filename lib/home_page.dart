@@ -45,6 +45,7 @@ class _HomePageState extends State<HomePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              
               SwitchButtons(
                 selected: selectedView,
                 onChanged: (value) {

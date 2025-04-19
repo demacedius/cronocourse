@@ -27,12 +27,12 @@ enum PaymentSheetFormFactoryConfig {
             return config.merchantDisplayName
         }
     }
-    var linkPaymentMethodsOnly: Bool {
+    var overrideCountry: String? {
         switch self {
         case .paymentSheet(let config):
-            return config.linkPaymentMethodsOnly
+            return config.userOverrideCountry
         case .customerSheet:
-            return false
+            return nil
         }
     }
     var billingDetailsCollectionConfiguration: PaymentSheet.BillingDetailsCollectionConfiguration {
@@ -82,6 +82,15 @@ enum PaymentSheetFormFactoryConfig {
             return config.preferredNetworks
         case .customerSheet(let config):
             return config.preferredNetworks
+        }
+    }
+
+    var isUsingBillingAddressCollection: Bool {
+        switch self {
+        case .paymentSheet(let config):
+            return config.requiresBillingDetailCollection()
+        case .customerSheet(let config):
+            return config.isUsingBillingAddressCollection()
         }
     }
 }

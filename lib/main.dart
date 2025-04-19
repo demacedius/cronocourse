@@ -9,11 +9,13 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import 'firebase_options.dart';
 import 'auth_gate.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: ".env");
   Stripe.publishableKey = 'pk_live_51P28qVP1Eugt8srj8UCHaI9raplneZfMOGq8urtNSxa9DeQj8thLydePe5UazsymUvUSEyK6xaZffRlZ9A9PiUgb00VMvMB2Qr';
 
   await Firebase.initializeApp(

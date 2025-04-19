@@ -25,18 +25,16 @@ final class ManualEntryViewController: UIViewController {
     weak var delegate: ManualEntryViewControllerDelegate?
 
     private lazy var manualEntryFormView: ManualEntryFormView = {
-        let manualEntryFormView = ManualEntryFormView()
+        let manualEntryFormView = ManualEntryFormView(
+            isTestMode: dataSource.manifest.isTestMode,
+            theme: dataSource.manifest.theme
+        )
         manualEntryFormView.delegate = self
         return manualEntryFormView
     }()
-    private lazy var footerView: ManualEntryFooterView = {
-        let manualEntryFooterView = ManualEntryFooterView(
-            didSelectContinue: { [weak self] in
-                self?.didSelectContinue()
-            }
-        )
-        return manualEntryFooterView
-    }()
+
+    private var footerButton: StripeUICore.Button?
+    private var paneLayoutView: PaneLayoutView?
 
     init(dataSource: ManualEntryDataSource) {
         self.dataSource = dataSource
@@ -51,24 +49,63 @@ final class ManualEntryViewController: UIViewController {
         super.viewDidLoad()
         view.backgroundColor = .customBackgroundColor
 
-        let paneWithHeaderLayoutView = PaneWithHeaderLayoutView(
-            title: STPLocalizedString(
-                "Enter bank account details",
-                "The title of a screen that allows a user to manually enter their bank account information."
+        let footerView = PaneLayoutView.createFooterView(
+            primaryButtonConfiguration: PaneLayoutView.ButtonConfiguration(
+                title: STPLocalizedString(
+                    "Submit",
+                    "The submit button for a screen that allows a user to manually enter their bank account information."
+                ),
+                accessibilityIdentifier: "manual_entry_continue_button",
+                action: didSelectContinue
             ),
-            subtitle: dataSource.manifest.manualEntryUsesMicrodeposits
-                ? STPLocalizedString(
-                    "Your bank information will be verified with micro-deposits to your account",
-                    "The subtitle/description in a screen that allows a user to manually enter their bank account information. It informs the user that their bank account information will have to be verified."
-                ) : nil,
-            contentView: manualEntryFormView,
-            footerView: footerView
+            theme: dataSource.manifest.theme
         )
-        paneWithHeaderLayoutView.addTo(view: view)
-        #if !STP_BUILD_FOR_VISION
-        paneWithHeaderLayoutView.scrollView.keyboardDismissMode = .onDrag
+        self.footerButton = footerView.primaryButton
+
+        self.paneLayoutView = PaneLayoutView(
+            contentView: PaneLayoutView.createContentView(
+                iconView: nil,
+                title: STPLocalizedString(
+                    "Enter bank details",
+                    "The title of a screen that allows a user to manually enter their bank account information."
+                ),
+                subtitle: {
+                    let checkingOnly = !dataSource.manifest.product.hasSuffix("onboarding")
+                    if checkingOnly {
+                        if dataSource.manifest.manualEntryUsesMicrodeposits {
+                            return STPLocalizedString(
+                                "Your bank information will be verified via micro-deposits to your account, typically within 1-2 business days. Only checking accounts are supported.",
+                                "The subtitle/description in a screen that allows a user to manually enter their bank account information."
+                            )
+                        } else {
+                            return STPLocalizedString(
+                                "Only checking accounts are supported.",
+                                "The subtitle/description in a screen that allows a user to manually enter their bank account information."
+                            )
+                        }
+                    } else { // checking or savings
+                        if dataSource.manifest.manualEntryUsesMicrodeposits {
+                            return STPLocalizedString(
+                                "Your bank information will be verified with micro-deposits to your account. This typically takes 1-2 business days.",
+                                "The subtitle/description in a screen that allows a user to manually enter their bank account information."
+                            )
+                        } else {
+                            return STPLocalizedString(
+                                "Checking and savings accounts are supported.",
+                                "The subtitle/description in a screen that allows a user to manually enter their bank account information."
+                            )
+                        }
+                    }
+                }(),
+                contentView: manualEntryFormView
+            ),
+            footerView: footerView.footerView,
+            keepFooterAboveKeyboard: true
+        )
+        paneLayoutView?.addTo(view: view)
+        #if !canImport(CompositorServices)
+        paneLayoutView?.scrollView.keyboardDismissMode = .onDrag
         #endif
-        stp_beginObservingKeyboardAndInsettingScrollView(paneWithHeaderLayoutView.scrollView, onChange: nil)
 
         adjustContinueButtonStateIfNeeded()
 
@@ -84,7 +121,7 @@ final class ManualEntryViewController: UIViewController {
         }
         manualEntryFormView.setError(text: nil)  // clear previous error
 
-        footerView.setIsLoading(true)
+        footerButton?.isLoading = true
         dataSource.attachBankAccountToLinkAccountSession(
             routingNumber: routingAndAccountNumber.routingNumber,
             accountNumber: routingAndAccountNumber.accountNumber
@@ -92,6 +129,9 @@ final class ManualEntryViewController: UIViewController {
             guard let self = self else { return }
             switch result {
             case .success(let resource):
+                // note: we are not stopping the footer button loading in the `success`
+                // case because we will transition to a different screen
+                // so we want to avoid slight animation 'blip' by stopping
                 self.delegate?
                     .manualEntryViewController(
                         self,
@@ -99,6 +139,8 @@ final class ManualEntryViewController: UIViewController {
                         accountNumberLast4: String(routingAndAccountNumber.accountNumber.suffix(4))
                     )
             case .failure(let error):
+                self.footerButton?.isLoading = false
+
                 let errorText: String
                 if let stripeError = error as? StripeError, case .apiError(let apiError) = stripeError {
                     errorText = apiError.message ?? stripeError.localizedDescription
@@ -114,12 +156,11 @@ final class ManualEntryViewController: UIViewController {
                         pane: .manualEntry
                     )
             }
-            self.footerView.setIsLoading(false)
         }
     }
 
     private func adjustContinueButtonStateIfNeeded() {
-        footerView.continueButton.isEnabled = (manualEntryFormView.routingAndAccountNumber != nil)
+        footerButton?.isEnabled = (manualEntryFormView.routingAndAccountNumber != nil)
     }
 }
 
@@ -129,5 +170,10 @@ extension ManualEntryViewController: ManualEntryFormViewDelegate {
 
     func manualEntryFormViewTextDidChange(_ view: ManualEntryFormView) {
         adjustContinueButtonStateIfNeeded()
+    }
+
+    func manualEntryFormViewShouldSubmit(_ view: ManualEntryFormView) {
+        adjustContinueButtonStateIfNeeded()
+        didSelectContinue()
     }
 }

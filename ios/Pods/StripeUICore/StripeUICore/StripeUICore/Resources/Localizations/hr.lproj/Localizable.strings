@@ -14,9 +14,13 @@
 
 "BSB number" = "BSB broj";
 
+"Bank account •••• %@" = "Bankovni račun •••• %@";
+
 "Billing address is same as shipping" = "Adresa računa jednaka je adresi dostave";
 
 "Cancel" = "Otkaži";
+
+"Card brand" = "Robna marka kartice";
 
 "City" = "Grad";
 
@@ -82,6 +86,8 @@
 
 "Phone" = "Telefon";
 
+"Phone number" = "Telefonski broj";
+
 "Postal code" = "Poštanski broj";
 
 "Prefecture" = "Prefektura";
@@ -90,13 +96,15 @@
 
 "Remove" = "Ukloni";
 
-"Remove bank account" = "Ukloni bankovni račun";
+"Remove bank account?" = "Ukloniti bankovni račun?";
 
-"Remove bank account ending in %@" = "Ukloni bankovni račun koji završava na %@";
+"Remove card" = "Ukloni karticu";
 
 "Search" = "Pretraži";
 
 "Select card brand (optional)" = "Odaberite marku kartice (nije obavezno)";
+
+"Sort code" = "Bankovni kod za razvrstavanje (UK)";
 
 "State" = "Država";
 
@@ -109,6 +117,8 @@
 "The ID number you entered is incomplete." = "Uneseni identifikacijski broj nije potpun.";
 
 "The account number you entered is incomplete." = "Uneseni broj računa je nepotpun.";
+
+"The sort code you entered is invalid." = "Bankovni kod za razvrstavanje koji ste unijeli nije važeći.";
 
 "Town or city" = "Gradić ili grad";
 

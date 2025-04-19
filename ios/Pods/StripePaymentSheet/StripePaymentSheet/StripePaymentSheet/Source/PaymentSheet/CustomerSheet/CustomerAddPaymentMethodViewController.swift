@@ -11,14 +11,19 @@ import UIKit
 
 protocol CustomerAddPaymentMethodViewControllerDelegate: AnyObject {
     func didUpdate(_ viewController: CustomerAddPaymentMethodViewController)
-    func updateErrorLabel(for: Error?)
+    func updateErrorLabel(for: Swift.Error?)
 }
 
 @objc(STP_Internal_CustomerAddPaymentMethodViewController)
 class CustomerAddPaymentMethodViewController: UIViewController {
+    enum Error: Swift.Error {
+        case paymentMethodTypesEmpty
+        case usBankAccountParamsMissing
+    }
 
     let paymentMethodTypes: [PaymentSheet.PaymentMethodType]
     let cbcEligible: Bool
+    let savePaymentMethodConsentBehavior: PaymentSheetFormFactory.SavePaymentMethodConsentBehavior
 
     // MARK: - Read-only Properties
     weak var delegate: CustomerAddPaymentMethodViewControllerDelegate?
@@ -36,18 +41,9 @@ class CustomerAddPaymentMethodViewController: UIViewController {
     }
     // MARK: - Writable Properties
     private let configuration: CustomerSheet.Configuration
-    private lazy var usBankAccountFormElement: USBankAccountPaymentMethodElement? = {
-        // We are keeping usBankAccountInfo in memory to preserve state
-        // if the user switches payment method types
-        let paymentMethodElement = makeElement(for: selectedPaymentMethodType)
-        if let usBankAccountPaymentMethodElement = paymentMethodElement as? USBankAccountPaymentMethodElement {
-            usBankAccountPaymentMethodElement.presentingViewControllerDelegate = self
-        } else {
-            assertionFailure("Wrong type for usBankAccountFormElement")
-        }
-        return paymentMethodElement as? USBankAccountPaymentMethodElement
-    }()
 
+    // We are keeping usBankAccountInfo in memory to preserve state if the user switches payment method types
+    private var usBankAccountFormElement: USBankAccountPaymentMethodElement?
     var overrideActionButtonBehavior: OverrideableBuyButtonBehavior? {
         if selectedPaymentMethodType == .stripe(.USBankAccount) {
             if let paymentOption = paymentOption,
@@ -72,6 +68,8 @@ class CustomerAddPaymentMethodViewController: UIViewController {
         switch overrideBuyButtonBehavior {
         case .LinkUSBankAccount:
             return usBankAccountFormElement?.canLinkAccount ?? false
+        case .instantDebits:
+            return false // instant debits is not supported for customer sheet
         }
     }
 
@@ -85,9 +83,16 @@ class CustomerAddPaymentMethodViewController: UIViewController {
     }
 
     private lazy var paymentMethodFormElement: PaymentMethodElement = {
-        if selectedPaymentMethodType == .stripe(.USBankAccount),
-           let usBankAccountFormElement = usBankAccountFormElement {
-            return usBankAccountFormElement
+        if selectedPaymentMethodType == .stripe(.USBankAccount) {
+            if let usBankAccountFormElement {
+                // Use the cached form instead of creating a new one
+                return usBankAccountFormElement
+            } else {
+                // Cache the form
+                let element = self.makeElement(for: .stripe(.USBankAccount))
+                usBankAccountFormElement = element as? USBankAccountPaymentMethodElement
+                return element
+            }
         }
         return makeElement(for: selectedPaymentMethodType)
     }()
@@ -117,12 +122,20 @@ class CustomerAddPaymentMethodViewController: UIViewController {
         configuration: CustomerSheet.Configuration,
         paymentMethodTypes: [PaymentSheet.PaymentMethodType],
         cbcEligible: Bool,
+        savePaymentMethodConsentBehavior: PaymentSheetFormFactory.SavePaymentMethodConsentBehavior,
         delegate: CustomerAddPaymentMethodViewControllerDelegate
     ) {
         self.configuration = configuration
         self.delegate = delegate
+        if paymentMethodTypes.isEmpty {
+            let errorAnalytic = ErrorAnalytic(event: .unexpectedCustomerSheetError,
+                                              error: Error.paymentMethodTypesEmpty)
+            STPAnalyticsClient.sharedClient.log(analytic: errorAnalytic)
+        }
+        stpAssert(!paymentMethodTypes.isEmpty, "At least one payment method type must be available.")
         self.paymentMethodTypes = paymentMethodTypes
         self.cbcEligible = cbcEligible
+        self.savePaymentMethodConsentBehavior = savePaymentMethodConsentBehavior
         super.init(nibName: nil, bundle: nil)
         self.view.backgroundColor = configuration.appearance.colors.background
     }
@@ -131,6 +144,11 @@ class CustomerAddPaymentMethodViewController: UIViewController {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         STPAnalyticsClient.sharedClient.logCSAddPaymentMethodScreenPresented()
+    }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        sendEventToSubviews(.viewDidAppear, from: view)
     }
 
     override func viewDidLoad() {
@@ -179,7 +197,7 @@ class CustomerAddPaymentMethodViewController: UIViewController {
             paymentMethodDetailsContainerView.layoutIfNeeded()
             newView.alpha = 0
 
-            #if !STP_BUILD_FOR_VISION
+            #if !canImport(CompositorServices)
             UISelectionFeedbackGenerator().selectionChanged()
             #endif
             // Fade the new one in and the old one out
@@ -199,9 +217,13 @@ class CustomerAddPaymentMethodViewController: UIViewController {
         }
     }
     private func updateFormElement() {
-        if selectedPaymentMethodType == .stripe(.USBankAccount),
-           let usBankAccountFormElement = usBankAccountFormElement {
-            paymentMethodFormElement = usBankAccountFormElement
+        if selectedPaymentMethodType == .stripe(.USBankAccount) {
+            if let usBankAccountFormElement {
+                paymentMethodFormElement = usBankAccountFormElement
+            } else {
+                paymentMethodFormElement = makeElement(for: .stripe(.USBankAccount))
+                usBankAccountFormElement = paymentMethodFormElement as? USBankAccountPaymentMethodElement
+            }
         } else {
             paymentMethodFormElement = makeElement(for: selectedPaymentMethodType)
         }
@@ -209,21 +231,21 @@ class CustomerAddPaymentMethodViewController: UIViewController {
         sendEventToSubviews(.viewDidAppear, from: view)
     }
     private func makeElement(for type: PaymentSheet.PaymentMethodType) -> PaymentMethodElement {
+        let configuration = PaymentSheetFormFactoryConfig.customerSheet(configuration)
         let formElement = PaymentSheetFormFactory(
-            configuration: .customerSheet(configuration),
+            configuration: configuration,
             paymentMethod: type,
             previousCustomerInput: nil,
             addressSpecProvider: .shared,
-            offerSaveToLinkWhenSupported: false,
+            showLinkInlineCardSignup: false,
             linkAccount: nil,
             cardBrandChoiceEligible: cbcEligible,
-            supportsLinkCard: false,
             isPaymentIntent: false,
-            currency: nil,
-            amount: nil,
+            isSettingUp: true,
             countryCode: nil,
-            saveMode: .merchantRequired)
-            .make()
+            savePaymentMethodConsentBehavior: savePaymentMethodConsentBehavior,
+            analyticsHelper: .init(isCustom: false, configuration: .init()) // Just use a dummy analytics helper; we don't look at these analytics.
+        ).make()
         formElement.delegate = self
         return formElement
     }
@@ -236,6 +258,8 @@ extension CustomerAddPaymentMethodViewController {
         switch behavior {
         case .LinkUSBankAccount:
             handleCollectBankAccount(from: viewController, clientSecret: clientSecret)
+        case .instantDebits:
+            assertionFailure("instant debits is not supported for customer sheet")
         }
     }
     func handleCollectBankAccount(from viewController: UIViewController, clientSecret: String) {
@@ -244,7 +268,10 @@ extension CustomerAddPaymentMethodViewController {
             let name = usBankAccountPaymentMethodElement.name,
             let email = usBankAccountPaymentMethodElement.email
         else {
-            assertionFailure()
+            let errorAnalytic = ErrorAnalytic(event: .unexpectedCustomerSheetError,
+                                              error: Error.usBankAccountParamsMissing)
+            STPAnalyticsClient.sharedClient.log(analytic: errorAnalytic)
+            stpAssertionFailure()
             return
         }
 
@@ -276,16 +303,24 @@ extension CustomerAddPaymentMethodViewController {
             switch financialConnectionsResult {
             case .cancelled:
                 break
-            case .completed(let linkedBank):
-                usBankAccountPaymentMethodElement.setLinkedBank(linkedBank)
+            case .completed(let completedResult):
+                if case .financialConnections(let linkedBank) = completedResult {
+                    usBankAccountPaymentMethodElement.setLinkedBank(linkedBank)
+                } else {
+                    self.delegate?.updateErrorLabel(for: genericError)
+                }
             case .failed:
                 self.delegate?.updateErrorLabel(for: genericError)
             }
         }
 
+        let additionalParameters: [String: Any] = [
+            "hosted_surface": "customer_sheet",
+        ]
         client.collectBankAccountForSetup(
             clientSecret: clientSecret,
             returnURL: configuration.returnURL,
+            additionalParameters: additionalParameters,
             onEvent: nil,
             params: params,
             from: viewController,

@@ -14,9 +14,13 @@
 
 "BSB number" = "BSB-nummer";
 
+"Bank account •••• %@" = "Bankrekening •••• %@";
+
 "Billing address is same as shipping" = "Factuuradres is hetzelfde als het verzendadres";
 
 "Cancel" = "Annuleren";
+
+"Card brand" = "Merk betaalkaart";
 
 "City" = "Plaats";
 
@@ -82,6 +86,8 @@
 
 "Phone" = "Telefoon";
 
+"Phone number" = "Telefoonnummer";
+
 "Postal code" = "Postcode";
 
 "Prefecture" = "Prefectuur";
@@ -90,13 +96,15 @@
 
 "Remove" = "Verwijderen";
 
-"Remove bank account" = "Bankrekening verwijderen";
+"Remove bank account?" = "Bankrekening verwijderen?";
 
-"Remove bank account ending in %@" = "Bankrekening verwijderen die eindigt op %@";
+"Remove card" = "Betaalkaart verwijderen";
 
 "Search" = "Zoeken";
 
 "Select card brand (optional)" = "Merk van betaalkaart selecteren (optioneel)";
+
+"Sort code" = "Bankcode";
 
 "State" = "Staat";
 
@@ -109,6 +117,8 @@
 "The ID number you entered is incomplete." = "Het opgegeven identificatienummer is onvolledig.";
 
 "The account number you entered is incomplete." = "Het opgegeven rekeningnummer is onvolledig.";
+
+"The sort code you entered is invalid." = "De opgegeven bankcode is ongeldig.";
 
 "Town or city" = "Stad of plaats";
 

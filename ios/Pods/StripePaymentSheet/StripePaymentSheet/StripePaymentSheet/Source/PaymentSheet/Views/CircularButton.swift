@@ -103,7 +103,7 @@ class CircularButton: UIControl {
             accessibilityIdentifier = "CircularButton.Remove"
         case .edit:
             imageView.image = Image.icon_edit.makeImage(template: true)
-            accessibilityLabel = String.Localized.update_card
+            accessibilityLabel = String.Localized.update_card_brand
             accessibilityIdentifier = "CircularButton.Edit"
         }
     }
@@ -132,7 +132,7 @@ class CircularButton: UIControl {
         imageView.tintColor = isEnabled ? iconColor : .tertiaryLabel
     }
 
-#if !STP_BUILD_FOR_VISION
+#if !canImport(CompositorServices)
     override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
         super.traitCollectionDidChange(previousTraitCollection)
         updateShadow()

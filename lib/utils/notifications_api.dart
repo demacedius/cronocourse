@@ -11,6 +11,7 @@ class NotificationsApi {
     await _firebaseMessaging.requestPermission();
 
     // 2. Récupérer le token FCM
+    await FirebaseMessaging.instance.getAPNSToken(); // attend d’avoir le token
     final fcmToken = await _firebaseMessaging.getToken();
     debugPrint('🔑 FCM Token : $fcmToken');
 

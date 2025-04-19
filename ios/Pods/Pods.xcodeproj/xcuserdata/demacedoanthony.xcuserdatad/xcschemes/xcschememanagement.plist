@@ -94,6 +94,26 @@
 			<key>isShown</key>
 			<false/>
 		</dict>
+		<key>FirebaseInstallations-FirebaseInstallations_Privacy.xcscheme</key>
+		<dict>
+			<key>isShown</key>
+			<false/>
+		</dict>
+		<key>FirebaseInstallations.xcscheme</key>
+		<dict>
+			<key>isShown</key>
+			<false/>
+		</dict>
+		<key>FirebaseMessaging-FirebaseMessaging_Privacy.xcscheme</key>
+		<dict>
+			<key>isShown</key>
+			<false/>
+		</dict>
+		<key>FirebaseMessaging.xcscheme</key>
+		<dict>
+			<key>isShown</key>
+			<false/>
+		</dict>
 		<key>FirebaseMessagingInterop.xcscheme</key>
 		<dict>
 			<key>isShown</key>
@@ -115,6 +135,16 @@
 			<false/>
 		</dict>
 		<key>GTMSessionFetcher.xcscheme</key>
+		<dict>
+			<key>isShown</key>
+			<false/>
+		</dict>
+		<key>GoogleDataTransport-GoogleDataTransport_Privacy.xcscheme</key>
+		<dict>
+			<key>isShown</key>
+			<false/>
+		</dict>
+		<key>GoogleDataTransport.xcscheme</key>
 		<dict>
 			<key>isShown</key>
 			<false/>
@@ -154,7 +184,7 @@
 			<key>isShown</key>
 			<false/>
 		</dict>
-		<key>Stripe-Stripe.xcscheme</key>
+		<key>Stripe-StripeBundle.xcscheme</key>
 		<dict>
 			<key>isShown</key>
 			<false/>
@@ -169,7 +199,7 @@
 			<key>isShown</key>
 			<false/>
 		</dict>
-		<key>StripeCore-StripeCore.xcscheme</key>
+		<key>StripeCore-StripeCoreBundle.xcscheme</key>
 		<dict>
 			<key>isShown</key>
 			<false/>
@@ -179,7 +209,7 @@
 			<key>isShown</key>
 			<false/>
 		</dict>
-		<key>StripeFinancialConnections-StripeFinancialConnections.xcscheme</key>
+		<key>StripeFinancialConnections-StripeFinancialConnectionsBundle.xcscheme</key>
 		<dict>
 			<key>isShown</key>
 			<false/>
@@ -189,7 +219,7 @@
 			<key>isShown</key>
 			<false/>
 		</dict>
-		<key>StripePaymentSheet-StripePaymentSheet.xcscheme</key>
+		<key>StripePaymentSheet-StripePaymentSheetBundle.xcscheme</key>
 		<dict>
 			<key>isShown</key>
 			<false/>
@@ -204,7 +234,7 @@
 			<key>isShown</key>
 			<false/>
 		</dict>
-		<key>StripePayments-StripePayments.xcscheme</key>
+		<key>StripePayments-StripePaymentsBundle.xcscheme</key>
 		<dict>
 			<key>isShown</key>
 			<false/>
@@ -214,7 +244,7 @@
 			<key>isShown</key>
 			<false/>
 		</dict>
-		<key>StripePaymentsUI-StripePaymentsUI.xcscheme</key>
+		<key>StripePaymentsUI-StripePaymentsUIBundle.xcscheme</key>
 		<dict>
 			<key>isShown</key>
 			<false/>
@@ -224,7 +254,7 @@
 			<key>isShown</key>
 			<false/>
 		</dict>
-		<key>StripeUICore-StripeUICore.xcscheme</key>
+		<key>StripeUICore-StripeUICoreBundle.xcscheme</key>
 		<dict>
 			<key>isShown</key>
 			<false/>
@@ -260,6 +290,16 @@
 			<false/>
 		</dict>
 		<key>firebase_core.xcscheme</key>
+		<dict>
+			<key>isShown</key>
+			<false/>
+		</dict>
+		<key>firebase_messaging-firebase_messaging_Privacy.xcscheme</key>
+		<dict>
+			<key>isShown</key>
+			<false/>
+		</dict>
+		<key>firebase_messaging.xcscheme</key>
 		<dict>
 			<key>isShown</key>
 			<false/>

@@ -8,12 +8,25 @@
 @_spi(STP) import StripeCore
 import UIKit
 
+/// An internal result type that helps us handle both
+/// Financial Connections and Instant Debits
+@_spi(STP) public enum HostControllerResult {
+    case completed(Completed)
+    case failed(error: Error)
+    case canceled
+
+    @_spi(STP) public enum Completed {
+        case financialConnections(StripeAPI.FinancialConnectionsSession)
+        case instantDebits(InstantDebitsLinkedBank)
+    }
+}
+
 protocol HostControllerDelegate: AnyObject {
 
     func hostController(
         _ hostController: HostController,
         viewController: UIViewController,
-        didFinish result: FinancialConnectionsSheet.Result
+        didFinish result: HostControllerResult
     )
 
     func hostController(
@@ -26,16 +39,18 @@ class HostController {
 
     // MARK: - Properties
 
-    private let api: FinancialConnectionsAPIClient
+    private let apiClient: FinancialConnectionsAPIClient
     private let clientSecret: String
     private let returnURL: String?
     private let analyticsClient: FinancialConnectionsAnalyticsClient
+    private let analyticsClientV1: STPAnalyticsClientProtocol
 
     private var nativeFlowController: NativeFlowController?
     lazy var hostViewController = HostViewController(
+        analyticsClientV1: analyticsClientV1,
         clientSecret: clientSecret,
         returnURL: returnURL,
-        apiClient: api,
+        apiClient: apiClient,
         delegate: self
     )
     lazy var navigationController = FinancialConnectionsNavigationController(rootViewController: hostViewController)
@@ -45,13 +60,15 @@ class HostController {
     // MARK: - Init
 
     init(
-        api: FinancialConnectionsAPIClient,
+        apiClient: FinancialConnectionsAPIClient,
+        analyticsClientV1: STPAnalyticsClientProtocol,
         clientSecret: String,
         returnURL: String?,
         publishableKey: String?,
         stripeAccount: String?
     ) {
-        self.api = api
+        self.apiClient = apiClient
+        self.analyticsClientV1 = analyticsClientV1
         self.clientSecret = clientSecret
         self.returnURL = returnURL
         self.analyticsClient = FinancialConnectionsAnalyticsClient()
@@ -83,45 +100,27 @@ extension HostController: HostViewControllerDelegate {
     ) {
         delegate?.hostController(self, didReceiveEvent: FinancialConnectionsEvent(name: .open))
 
-        guard
-            let consentPaneModel = synchronizePayload.text?.consentPane
-        else {
-            continueWithWebFlow(synchronizePayload.manifest)
-            return
-        }
-
         let flowRouter = FlowRouter(
             synchronizePayload: synchronizePayload,
             analyticsClient: analyticsClient
         )
-        defer {
-            // no matter how we exit this function
-            // log exposure to one of the variants if appropriate.
-            flowRouter.logExposureIfNeeded()
-        }
 
-        guard flowRouter.shouldUseNative else {
+        let flow = flowRouter.flow
+        analyticsClientV1.log(
+            analytic: FinancialConnectionsSheetFlowDetermined(
+                clientSecret: clientSecret,
+                flow: flow,
+                killswitchActive: flowRouter.killswitchActive
+            ),
+            apiClient: apiClient.backingAPIClient
+        )
+
+        switch flow {
+        case .webInstantDebits, .webFinancialConnections:
             continueWithWebFlow(synchronizePayload.manifest)
-            return
+        case .nativeInstantDebits, .nativeFinancialConnections:
+            continueWithNativeFlow(synchronizePayload)
         }
-
-        navigationController.configureAppearanceForNative()
-
-        let dataManager = NativeFlowAPIDataManager(
-            manifest: synchronizePayload.manifest,
-            visualUpdate: synchronizePayload.visual,
-            returnURL: returnURL,
-            consentPaneModel: consentPaneModel,
-            apiClient: api,
-            clientSecret: clientSecret,
-            analyticsClient: analyticsClient
-        )
-        nativeFlowController = NativeFlowController(
-            dataManager: dataManager,
-            navigationController: navigationController
-        )
-        nativeFlowController?.delegate = self
-        nativeFlowController?.startFlow()
     }
 
     func hostViewController(
@@ -144,21 +143,41 @@ private extension HostController {
             )
         )
 
-        let accountFetcher = FinancialConnectionsAccountAPIFetcher(api: api, clientSecret: clientSecret)
+        let accountFetcher = FinancialConnectionsAccountAPIFetcher(api: apiClient, clientSecret: clientSecret)
         let sessionFetcher = FinancialConnectionsSessionAPIFetcher(
-            api: api,
+            api: apiClient,
             clientSecret: clientSecret,
             accountFetcher: accountFetcher
         )
         let webFlowViewController = FinancialConnectionsWebFlowViewController(
             clientSecret: clientSecret,
-            apiClient: api,
+            apiClient: apiClient,
             manifest: manifest,
             sessionFetcher: sessionFetcher,
             returnURL: returnURL
         )
         webFlowViewController.delegate = self
         navigationController.setViewControllers([webFlowViewController], animated: true)
+    }
+
+    func continueWithNativeFlow(_ synchronizePayload: FinancialConnectionsSynchronize) {
+        navigationController.configureAppearanceForNative()
+
+        let dataManager = NativeFlowAPIDataManager(
+            manifest: synchronizePayload.manifest,
+            visualUpdate: synchronizePayload.visual,
+            returnURL: returnURL,
+            consentPaneModel: synchronizePayload.text?.consentPane,
+            apiClient: apiClient,
+            clientSecret: clientSecret,
+            analyticsClient: analyticsClient
+        )
+        nativeFlowController = NativeFlowController(
+            dataManager: dataManager,
+            navigationController: navigationController
+        )
+        nativeFlowController?.delegate = self
+        nativeFlowController?.startFlow()
     }
 }
 
@@ -168,7 +187,7 @@ extension HostController: FinancialConnectionsWebFlowViewControllerDelegate {
 
     func webFlowViewController(
         _ viewController: FinancialConnectionsWebFlowViewController,
-        didFinish result: FinancialConnectionsSheet.Result
+        didFinish result: HostControllerResult
     ) {
         delegate?.hostController(self, viewController: viewController, didFinish: result)
     }
@@ -186,7 +205,7 @@ extension HostController: FinancialConnectionsWebFlowViewControllerDelegate {
 extension HostController: NativeFlowControllerDelegate {
     func nativeFlowController(
         _ nativeFlowController: NativeFlowController,
-        didFinish result: FinancialConnectionsSheet.Result
+        didFinish result: HostControllerResult
     ) {
         guard let viewController = navigationController.topViewController else {
             assertionFailure("Navigation stack is empty")

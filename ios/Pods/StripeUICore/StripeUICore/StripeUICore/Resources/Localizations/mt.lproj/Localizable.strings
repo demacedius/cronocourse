@@ -14,9 +14,13 @@
 
 "BSB number" = "Numru BSB";
 
+"Bank account •••• %@" = "Kont tal-bank •••• %@";
+
 "Billing address is same as shipping" = "L-indirizz tal-fatturazzjoni huwa l-istess bħall-indirizz tal-posta";
 
 "Cancel" = "Ikkanċella";
+
+"Card brand" = "Id-ditta tal-karta";
 
 "City" = "Belt";
 
@@ -82,6 +86,8 @@
 
 "Phone" = "Telefon";
 
+"Phone number" = "In-numru tal-mowbajl";
+
 "Postal code" = "Kodiċi postali";
 
 "Prefecture" = "Prefettura";
@@ -90,13 +96,15 @@
 
 "Remove" = "Neħħi";
 
-"Remove bank account" = "Neħħi l-kont tal-bank";
+"Remove bank account?" = "Tixtieq tneħħi l-kont tal-bank?";
 
-"Remove bank account ending in %@" = "Neħħi l-kont tal-bank li jispiċċa b'%@";
+"Remove card" = "Neħħi l-karta";
 
 "Search" = "Fittex";
 
 "Select card brand (optional)" = "Agħżel id-ditta tal-karta (mhux obbligatorja)";
+
+"Sort code" = "Il-kodiċi Sort";
 
 "State" = "Stat";
 
@@ -109,6 +117,8 @@
 "The ID number you entered is incomplete." = "In-numru tal-ID li daħħalt mhuwiex komplut.";
 
 "The account number you entered is incomplete." = "In-numru tal-kont li daħħalt mhux komplut.";
+
+"The sort code you entered is invalid." = "Il-kodiċi sort li daħħalt mhux tajjeb.";
 
 "Town or city" = "Belt";
 

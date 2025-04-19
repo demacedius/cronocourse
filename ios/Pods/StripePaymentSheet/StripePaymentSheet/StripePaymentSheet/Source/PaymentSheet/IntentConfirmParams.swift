@@ -26,6 +26,7 @@ class IntentConfirmParams {
 
     let paymentMethodParams: STPPaymentMethodParams
     let paymentMethodType: PaymentSheet.PaymentMethodType
+    /// ⚠️ Usage of this is *not compatible* with server-side confirmation!
     let confirmPaymentMethodOptions: STPConfirmPaymentMethodOptions
 
     /// True if the customer opts to save their payment method for future payments.
@@ -33,12 +34,11 @@ class IntentConfirmParams {
     /// If `true`, a mandate (e.g. "By continuing you authorize Foo Corp to use your payment details for recurring payments...") was displayed to the customer.
     var didDisplayMandate: Bool = false
 
-    var linkedBank: LinkedBank?
+    var financialConnectionsLinkedBank: FinancialConnectionsLinkedBank?
+    var instantDebitsLinkedBank: InstantDebitsLinkedBank?
 
     var paymentSheetLabel: String {
-        if let linkedBank = linkedBank,
-            let last4 = linkedBank.last4
-        {
+        if let last4 = (financialConnectionsLinkedBank?.last4 ?? instantDebitsLinkedBank?.last4) {
             return "••••\(last4)"
         } else {
             return paymentMethodParams.paymentSheetLabel
@@ -46,9 +46,7 @@ class IntentConfirmParams {
     }
 
     func makeIcon(updateImageHandler: DownloadManager.UpdateImageHandler?) -> UIImage {
-        if let linkedBank = linkedBank,
-            let bankName = linkedBank.bankName
-        {
+        if let bankName = (financialConnectionsLinkedBank?.bankName ?? instantDebitsLinkedBank?.bankName) {
             return PaymentSheetImageLibrary.bankIcon(for: PaymentSheetImageLibrary.bankIconCode(for: bankName))
         } else {
             return paymentMethodParams.makeIcon(updateHandler: updateImageHandler)
@@ -68,6 +66,9 @@ class IntentConfirmParams {
             let params = STPPaymentMethodParams(type: .unknown)
             params.rawTypeString = externalPaymentMethod.type
             self.init(params: params, type: type)
+        case .instantDebits:
+            let params = STPPaymentMethodParams(type: .link)
+            self.init(params: params, type: type)
         }
     }
 
@@ -75,30 +76,6 @@ class IntentConfirmParams {
         self.paymentMethodType = type
         self.paymentMethodParams = params
         self.confirmPaymentMethodOptions = STPConfirmPaymentMethodOptions()
-    }
-
-    static func makeDashboardParams(
-        paymentIntentClientSecret: String,
-        paymentMethodID: String,
-        shouldSave: Bool,
-        paymentMethodType: STPPaymentMethodType,
-        customer: PaymentSheet.CustomerConfiguration?
-    ) -> STPPaymentIntentParams {
-        let params = STPPaymentIntentParams(clientSecret: paymentIntentClientSecret)
-        params.paymentMethodId = paymentMethodID
-
-        // Dashboard only supports a specific payment flow today
-        let options = STPConfirmPaymentMethodOptions()
-        options.setSetupFutureUsageIfNecessary(
-            shouldSave,
-            paymentMethodType: paymentMethodType,
-            customer: customer
-        )
-        params.paymentMethodOptions = options
-
-        options.setMoto()
-
-        return params
     }
 
     /// Applies the values of `Configuration.defaultBillingDetails` to this IntentConfirmParams if `attachDefaultsToPaymentMethod` is true.
@@ -115,7 +92,7 @@ class IntentConfirmParams {
 
     private func setDefaultBillingDetailsIfNecessary(defaultBillingDetails: PaymentSheet.BillingDetails, billingDetailsCollectionConfiguration: PaymentSheet.BillingDetailsCollectionConfiguration) {
         guard billingDetailsCollectionConfiguration.attachDefaultsToPaymentMethod else {
-           return
+            return
         }
         if let name = defaultBillingDetails.name {
             paymentMethodParams.nonnil_billingDetails.name = name
@@ -128,6 +105,49 @@ class IntentConfirmParams {
         }
         if defaultBillingDetails.address != .init() {
             paymentMethodParams.nonnil_billingDetails.address = STPPaymentMethodAddress(address: defaultBillingDetails.address)
+        }
+    }
+    func setAllowRedisplay(mobilePaymentElementFeatures: MobilePaymentElementComponentFeature?,
+                           isSettingUp: Bool) {
+        guard let mobilePaymentElementFeatures else {
+            // Legacy Ephemeral Key
+            paymentMethodParams.allowRedisplay = .unspecified
+            return
+        }
+        let paymentMethodSave = mobilePaymentElementFeatures.paymentMethodSave
+        let allowRedisplayOverride = mobilePaymentElementFeatures.paymentMethodSaveAllowRedisplayOverride
+
+        // Customer Session is enabled
+        if paymentMethodSave {
+            if isSettingUp {
+                if saveForFutureUseCheckboxState == .selected {
+                    paymentMethodParams.allowRedisplay = .always
+                } else if saveForFutureUseCheckboxState == .deselected {
+                    paymentMethodParams.allowRedisplay = .limited
+                }
+            } else {
+                if saveForFutureUseCheckboxState == .selected {
+                    paymentMethodParams.allowRedisplay = .always
+                } else if saveForFutureUseCheckboxState == .deselected {
+                    paymentMethodParams.allowRedisplay = .unspecified
+                }
+            }
+        } else {
+            stpAssert(saveForFutureUseCheckboxState == .hidden, "Checkbox should be hidden")
+            if isSettingUp {
+                paymentMethodParams.allowRedisplay = allowRedisplayOverride ?? .limited
+            } else {
+                // PaymentMethod won't be attached to customer
+                paymentMethodParams.allowRedisplay = .unspecified
+            }
+        }
+    }
+
+    func setAllowRedisplayForCustomerSheet(_ savePaymentMethodConsentBehavior: PaymentSheetFormFactory.SavePaymentMethodConsentBehavior) {
+        if savePaymentMethodConsentBehavior == .legacy {
+            paymentMethodParams.allowRedisplay = .unspecified
+        } else if savePaymentMethodConsentBehavior == .customerSheetWithCustomerSession {
+            paymentMethodParams.allowRedisplay = .always
         }
     }
 }

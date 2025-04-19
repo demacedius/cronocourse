@@ -36,6 +36,8 @@ public class STPPaymentMethodParams: NSObject, STPFormEncodable {
     @objc public var rawTypeString: String?
     /// Billing information associated with the PaymentMethod that may be used or required by particular types of payment methods.
     @objc public var billingDetails: STPPaymentMethodBillingDetails?
+    /// This field indicates whether this payment method can be shown again to its customer in a checkout flow
+    @objc public var allowRedisplay: STPPaymentMethodAllowRedisplay = .unspecified
     /// If this is a card PaymentMethod, this contains the user’s card details.
     @objc public var card: STPPaymentMethodCardParams?
     /// If this is an Alipay PaymentMethod, this contains additional details.
@@ -94,6 +96,18 @@ public class STPPaymentMethodParams: NSObject, STPFormEncodable {
     @objc public var swish: STPPaymentMethodSwishParams?
     /// If this is a MobilePay PaymentMethod, this contains additional details.
     @objc public var mobilePay: STPPaymentMethodMobilePayParams?
+    /// If this is a AmazonPay PaymentMethod, this contains additional details.
+    @objc public var amazonPay: STPPaymentMethodAmazonPayParams?
+    /// If this is a Alma PaymentMethod, this contains additional details.
+    @objc public var alma: STPPaymentMethodAlmaParams?
+    /// If this is a Sunbit PaymentMethod, this contains additional details.
+    @objc public var sunbit: STPPaymentMethodSunbitParams?
+    /// If this is a Billie PaymentMethod, this contains additional details.
+    @objc public var billie: STPPaymentMethodBillieParams?
+    /// If this is a Satispay PaymentMethod, this contains additional details.
+    @objc public var satispay: STPPaymentMethodSatispayParams?
+    /// If this is a Multibanco PaymentMethod, this contains additional details.
+    @objc public var multibanco: STPPaymentMethodMultibancoParams?
 
     /// Set of key-value pairs that you can attach to the PaymentMethod. This can be useful for storing additional information about the PaymentMethod in a structured format.
     @objc public var metadata: [String: String]?
@@ -102,17 +116,20 @@ public class STPPaymentMethodParams: NSObject, STPFormEncodable {
     /// - Parameters:
     ///   - card:                An object containing the user's card details.
     ///   - billingDetails:      An object containing the user's billing details.
+    ///   - allowRedisplay:      An enum defining consent options for redisplay
     ///   - metadata:            Additional information to attach to the PaymentMethod.
     @objc
     public convenience init(
         card: STPPaymentMethodCardParams,
         billingDetails: STPPaymentMethodBillingDetails?,
+        allowRedisplay: STPPaymentMethodAllowRedisplay = .unspecified,
         metadata: [String: String]?
     ) {
         self.init()
         self.type = .card
         self.card = card
         self.billingDetails = billingDetails
+        self.allowRedisplay = allowRedisplay
         self.metadata = metadata
     }
 
@@ -508,17 +525,20 @@ public class STPPaymentMethodParams: NSObject, STPFormEncodable {
     /// - Parameters:
     ///     - usBankAccount: An object containing additional US bank account details
     ///     - billingDetails: An object containing the user's billing details. Name is required for US Bank Accounts
+    ///     - allowRedisplay:      An enum defining consent options for redisplay
     ///     - metadata: Additional information to attach to the PaymentMethod
     @objc
     public convenience init(
         usBankAccount: STPPaymentMethodUSBankAccountParams,
         billingDetails: STPPaymentMethodBillingDetails,
+        allowRedisplay: STPPaymentMethodAllowRedisplay = .unspecified,
         metadata: [String: String]?
     ) {
         self.init()
         self.type = .USBankAccount
         self.usBankAccount = usBankAccount
         self.billingDetails = billingDetails
+        self.allowRedisplay = allowRedisplay
         self.metadata = metadata
     }
 
@@ -594,6 +614,114 @@ public class STPPaymentMethodParams: NSObject, STPFormEncodable {
         self.metadata = metadata
     }
 
+    /// Creates params for a AmazonPay PaymentMethod.
+    /// - Parameters:
+    ///   - amazonPay:           An object containing additional AmazonPay details.
+    ///   - billingDetails:      An object containing the user's billing details.
+    ///   - metadata:            Additional information to attach to the PaymentMethod.
+    @objc
+    public convenience init(
+        amazonPay: STPPaymentMethodAmazonPayParams,
+        billingDetails: STPPaymentMethodBillingDetails?,
+        metadata: [String: String]?
+    ) {
+        self.init()
+        self.type = .amazonPay
+        self.amazonPay = amazonPay
+        self.billingDetails = billingDetails
+        self.metadata = metadata
+    }
+
+    /// Creates params for a Alma PaymentMethod.
+    /// - Parameters:
+    ///   - alma:           An object containing additional Alma details.
+    ///   - billingDetails:      An object containing the user's billing details.
+    ///   - metadata:            Additional information to attach to the PaymentMethod.
+    @objc
+    public convenience init(
+        alma: STPPaymentMethodAlmaParams,
+        billingDetails: STPPaymentMethodBillingDetails?,
+        metadata: [String: String]?
+    ) {
+        self.init()
+        self.type = .alma
+        self.alma = alma
+        self.billingDetails = billingDetails
+        self.metadata = metadata
+    }
+
+    /// Creates params for a Sunbit PaymentMethod.
+    /// - Parameters:
+    ///   - sunbit:           An object containing additional Sunbit details.
+    ///   - billingDetails:      An object containing the user's billing details.
+    ///   - metadata:            Additional information to attach to the PaymentMethod.
+    @objc
+    public convenience init(
+        sunbit: STPPaymentMethodSunbitParams,
+        billingDetails: STPPaymentMethodBillingDetails?,
+        metadata: [String: String]?
+    ) {
+        self.init()
+        self.type = .sunbit
+        self.sunbit = sunbit
+        self.billingDetails = billingDetails
+        self.metadata = metadata
+    }
+
+    /// Creates params for a Billie PaymentMethod.
+    /// - Parameters:
+    ///   - billie:           An object containing additional Billie details.
+    ///   - billingDetails:      An object containing the user's billing details.
+    ///   - metadata:            Additional information to attach to the PaymentMethod.
+    @objc
+    public convenience init(
+        billie: STPPaymentMethodBillieParams,
+        billingDetails: STPPaymentMethodBillingDetails?,
+        metadata: [String: String]?
+    ) {
+        self.init()
+        self.type = .billie
+        self.billie = billie
+        self.billingDetails = billingDetails
+        self.metadata = metadata
+    }
+
+    /// Creates params for a Satispay PaymentMethod.
+    /// - Parameters:
+    ///   - satispay:            An object containing additional Satispay details.
+    ///   - billingDetails:      An object containing the user's billing details.
+    ///   - metadata:            Additional information to attach to the PaymentMethod.
+    @objc
+    public convenience init(
+        satispay: STPPaymentMethodSatispayParams,
+        billingDetails: STPPaymentMethodBillingDetails?,
+        metadata: [String: String]?
+    ) {
+        self.init()
+        self.type = .satispay
+        self.satispay = satispay
+        self.billingDetails = billingDetails
+        self.metadata = metadata
+    }
+
+    /// Creates params for an Multibanco PaymentMethod.
+    /// - Parameters:
+    ///   - multibanco:          An object containing additional Multibanco details.
+    ///   - billingDetails:      An object containing the user's billing details.
+    ///   - metadata:            Additional information to attach to the PaymentMethod.
+    @objc
+    public convenience init(
+        multibanco: STPPaymentMethodMultibancoParams,
+        billingDetails: STPPaymentMethodBillingDetails?,
+        metadata: [String: String]?
+    ) {
+        self.init()
+        self.type = .multibanco
+        self.multibanco = multibanco
+        self.billingDetails = billingDetails
+        self.metadata = metadata
+    }
+
     /// Creates params from a single-use PaymentMethod. This is useful for recreating a new payment method
     /// with similar settings. It will return nil if used with a reusable PaymentMethod.
     /// - Parameter paymentMethod:       An object containing the original single-use PaymentMethod.
@@ -654,7 +782,19 @@ public class STPPaymentMethodParams: NSObject, STPFormEncodable {
             self.affirm = STPPaymentMethodAffirmParams()
         case .swish:
             self.swish = STPPaymentMethodSwishParams()
-        case .paynow, .zip, .amazonPay, .alma, .mobilePay, .konbini, .promptPay:
+        case .amazonPay:
+            self.amazonPay = STPPaymentMethodAmazonPayParams()
+        case .alma:
+            self.alma = STPPaymentMethodAlmaParams()
+        case .sunbit:
+            self.sunbit = STPPaymentMethodSunbitParams()
+        case .billie:
+            self.billie = STPPaymentMethodBillieParams()
+        case .satispay:
+            self.satispay = STPPaymentMethodSatispayParams()
+        case .multibanco:
+            self.multibanco = STPPaymentMethodMultibancoParams()
+        case .paynow, .zip, .mobilePay, .konbini, .promptPay, .twint:
             // No parameters
             break
         // All reusable PaymentMethods go below:
@@ -667,7 +807,6 @@ public class STPPaymentMethodParams: NSObject, STPFormEncodable {
             .blik,
             .weChatPay,
             .link,
-            .linkInstantDebit,
             .USBankAccount,
             .cashApp,
             .revolutPay,
@@ -687,6 +826,7 @@ public class STPPaymentMethodParams: NSObject, STPFormEncodable {
         return [
             NSStringFromSelector(#selector(getter: rawTypeString)): "type",
             NSStringFromSelector(#selector(getter: billingDetails)): "billing_details",
+            NSStringFromSelector(#selector(getter: allowRedisplayRawString)): "allow_redisplay",
             NSStringFromSelector(#selector(getter: card)): "card",
             NSStringFromSelector(#selector(getter: iDEAL)): "ideal",
             NSStringFromSelector(#selector(getter: eps)): "eps",
@@ -712,9 +852,19 @@ public class STPPaymentMethodParams: NSObject, STPFormEncodable {
             NSStringFromSelector(#selector(getter: revolutPay)): "revolut_pay",
             NSStringFromSelector(#selector(getter: swish)): "swish",
             NSStringFromSelector(#selector(getter: mobilePay)): "mobilepay",
+            NSStringFromSelector(#selector(getter: amazonPay)): "amazon_pay",
+            NSStringFromSelector(#selector(getter: alma)): "alma",
+            NSStringFromSelector(#selector(getter: sunbit)): "sunbit",
+            NSStringFromSelector(#selector(getter: billie)): "billie",
+            NSStringFromSelector(#selector(getter: satispay)): "satispay",
+            NSStringFromSelector(#selector(getter: multibanco)): "multibanco",
             NSStringFromSelector(#selector(getter: link)): "link",
             NSStringFromSelector(#selector(getter: metadata)): "metadata",
         ]
+    }
+
+    @objc internal var allowRedisplayRawString: String? {
+        return allowRedisplay.stringValue
     }
 }
 
@@ -1173,7 +1323,19 @@ extension STPPaymentMethodParams {
             swish = STPPaymentMethodSwishParams()
         case .mobilePay:
             mobilePay = STPPaymentMethodMobilePayParams()
-        case .cardPresent, .linkInstantDebit, .paynow, .zip, .amazonPay, .alma, .konbini, .promptPay:
+        case .amazonPay:
+            amazonPay = STPPaymentMethodAmazonPayParams()
+        case .alma:
+            alma = STPPaymentMethodAlmaParams()
+        case .sunbit:
+            sunbit = STPPaymentMethodSunbitParams()
+        case .billie:
+            billie = STPPaymentMethodBillieParams()
+        case .satispay:
+            satispay = STPPaymentMethodSatispayParams()
+        case .multibanco:
+            multibanco = STPPaymentMethodMultibancoParams()
+        case .cardPresent, .paynow, .zip, .konbini, .promptPay, .twint:
             // These payment methods don't have any params
             break
         case .unknown:
@@ -1182,11 +1344,11 @@ extension STPPaymentMethodParams {
     }
 }
 
+// MARK: - STPPaymentOption
+// This should be in `STPPaymentMethodParams+BasicUI.swift` but there's some module issue
 extension STPPaymentMethodParams {
     @objc public var label: String {
         switch type {
-        case .alipay:
-            return "Alipay"  // ? Why aren't these localized?
         case .card:
             if let card = card {
                 let brand = STPCardValidator.brand(forNumber: card.number ?? "")
@@ -1195,65 +1357,13 @@ extension STPPaymentMethodParams {
             } else {
                 return STPCardBrandUtilities.stringFrom(.unknown) ?? ""
             }
-        case .iDEAL:
-            return "iDEAL"
         case .FPX:
             if let fpx = fpx {
                 return STPFPXBank.stringFrom(fpx.bank) ?? ""
             } else {
                 return "FPX"
             }
-        case .SEPADebit:
-            return "SEPA Debit"
-        case .bacsDebit:
-            return "Bacs Debit"
-        case .AUBECSDebit:
-            return "AU BECS Debit"
-        case .giropay:
-            return "giropay"
-        case .przelewy24:
-            return "Przelewy24"
-        case .EPS:
-            return "EPS"
-        case .bancontact:
-            return "Bancontact"
-        case .netBanking:
-            return "NetBanking"
-        case .OXXO:
-            return "OXXO"
-        case .sofort:
-            return "Sofort"
-        case .UPI:
-            return "UPI"
-        case .grabPay:
-            return "GrabPay"
-        case .payPal:
-            return "PayPal"
-        case .afterpayClearpay:
-            return "Afterpay Clearpay"
-        case .blik:
-            return "BLIK"
-        case .weChatPay:
-            return "WeChat Pay"
-        case .boleto:
-            return "Boleto"
-        case .link:
-            return "Link"
-        case .klarna:
-            return "Klarna"
-        case .linkInstantDebit:
-            return "Bank"
-        case .affirm:
-            return "Affirm"
-        case .USBankAccount:
-            return "US Bank Account"
-        case .cashApp:
-            return "Cash App Pay"
-        case .revolutPay:
-            return "Revolut Pay"
-        case .cardPresent, .unknown:
-            return STPLocalizedString("Unknown", "Default missing source type label")
-        case .paynow, .zip, .amazonPay, .alma, .mobilePay, .konbini, .promptPay, .swish:
+        case .paynow, .zip, .amazonPay, .alma, .mobilePay, .konbini, .promptPay, .swish, .sunbit, .billie, .satispay, .iDEAL, .SEPADebit, .bacsDebit, .AUBECSDebit, .giropay, .przelewy24, .EPS, .bancontact, .netBanking, .OXXO, .sofort, .UPI, .grabPay, .payPal, .afterpayClearpay, .blik, .weChatPay, .boleto, .link, .klarna, .affirm, .USBankAccount, .cashApp, .revolutPay, .twint, .multibanco, .alipay, .cardPresent, .unknown:
             // Use the label already defined in STPPaymentMethodType; the params object for these types don't contain additional information that affect the display label (like cards do)
             return type.displayName
         @unknown default:

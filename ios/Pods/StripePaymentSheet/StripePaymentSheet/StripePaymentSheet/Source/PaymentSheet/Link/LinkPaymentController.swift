@@ -48,7 +48,7 @@ import UIKit
     @_spi(LinkOnly) public var paymentOption: PaymentOptionDisplayData? {
         if paymentMethodId == nil { return nil }
 
-        return PaymentOptionDisplayData(image: Image.pm_type_link.makeImage(), label: STPPaymentMethodType.link.displayName)
+        return PaymentOptionDisplayData(image: Image.link_logo.makeImage(), label: STPPaymentMethodType.link.displayName)
     }
 
     /// The parent view controller to present
@@ -91,7 +91,6 @@ import UIKit
     private init(intentSecret: PaymentSheet.InitializationMode, returnURL: String?, billingDetails: PaymentSheet.BillingDetails?) {
         self.mode = intentSecret
         var configuration = PaymentSheet.Configuration()
-        configuration.linkPaymentMethodsOnly = true
         configuration.returnURL = returnURL
         if let billingDetails = billingDetails {
             configuration.defaultBillingDetails = billingDetails
@@ -311,7 +310,7 @@ import UIKit
                     }
                 }
             case .deferredIntent(let intentConfiguration):
-                let paymentMethod = STPPaymentMethod(stripeId: paymentMethodId)
+                let paymentMethod = STPPaymentMethod(stripeId: paymentMethodId, type: .link)
                 PaymentSheet
                     .handleDeferredIntentConfirmation(
                         confirmType: .saved(paymentMethod, paymentOptions: nil),

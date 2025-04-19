@@ -8,9 +8,9 @@
 
 "BLIK" = "BLIK";
 
-"Bancontact" = "Bancontact";
+"Bacs Direct Debit" = "Άμεση χρέωση Bacs";
 
-"Bank" = "Τράπεζα";
+"Bancontact" = "Bancontact";
 
 "Boleto" = "Boleto";
 
@@ -50,7 +50,7 @@
 
 "UPI" = "UPI";
 
-"US Bank Account" = "Τραπεζικός λογαριασμός στις Η.Π.Α.";
+"US bank account" = "Τραπεζικός λογαριασμός στις Ηνωμένες Πολιτείες";
 
 "Unknown" = "Άγνωστο";
 

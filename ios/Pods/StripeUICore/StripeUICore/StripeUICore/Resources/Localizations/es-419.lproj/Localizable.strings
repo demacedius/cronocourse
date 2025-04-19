@@ -14,9 +14,13 @@
 
 "BSB number" = "Número de BSB";
 
+"Bank account •••• %@" = "Cuenta bancaria •••• %@";
+
 "Billing address is same as shipping" = "La dirección de facturación es la misma que la de envío.";
 
 "Cancel" = "Cancelar";
+
+"Card brand" = "Marca de la tarjeta";
 
 "City" = "Ciudad";
 
@@ -82,6 +86,8 @@
 
 "Phone" = "Teléfono";
 
+"Phone number" = "Número de teléfono";
+
 "Postal code" = "Código postal";
 
 "Prefecture" = "Prefectura";
@@ -90,13 +96,15 @@
 
 "Remove" = "Eliminar";
 
-"Remove bank account" = "Eliminar cuenta bancaria";
+"Remove bank account?" = "¿Deseas eliminar la cuenta bancaria?";
 
-"Remove bank account ending in %@" = "Eliminar la cuenta bancaria que termina en %@";
+"Remove card" = "Quitar tarjeta";
 
 "Search" = "Buscar";
 
 "Select card brand (optional)" = "Selecciona una marca de tarjeta (opcional)";
+
+"Sort code" = "Código Sort";
 
 "State" = "Estado";
 
@@ -109,6 +117,8 @@
 "The ID number you entered is incomplete." = "El número de documento que ingresaste está incompleto.";
 
 "The account number you entered is incomplete." = "El número de cuenta que ingresaste está incompleto.";
+
+"The sort code you entered is invalid." = "El código Sort que ingresaste no es válido.";
 
 "Town or city" = "Pueblo o ciudad";
 

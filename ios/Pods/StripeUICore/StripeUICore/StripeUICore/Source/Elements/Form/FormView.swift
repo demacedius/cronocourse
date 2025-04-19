@@ -36,9 +36,19 @@ import UIKit
             stack.axis = .vertical
             stack.spacing = ElementsUI.formSpacing
         }
-
+        for (view, spacing) in viewModel.customSpacing {
+            self.stackView.setCustomSpacing(spacing, after: view)
+        }
         super.init(frame: .zero)
         addAndPinSubview(self.stackView)
+
+        // When the form is empty, set a height constraint of zero with the lowest possible priority.
+        // This provides a default height and avoids ambiguity in height constraints when there are no form elements present.
+        let zeroConstraint = self.stackView.heightAnchor.constraint(equalToConstant: 0)
+        zeroConstraint.priority = UILayoutPriority(rawValue: 1) // This sets the priority as low as possible, allowing other constraints to easily override it.
+        NSLayoutConstraint.activate([
+            zeroConstraint
+        ])
     }
 
     required init?(coder: NSCoder) {

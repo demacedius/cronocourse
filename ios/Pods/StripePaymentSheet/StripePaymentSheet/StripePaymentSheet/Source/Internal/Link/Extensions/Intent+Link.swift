@@ -8,26 +8,54 @@
 
 @_spi(STP) import StripePayments
 
-extension Intent {
+extension STPElementsSession {
     var supportsLink: Bool {
-        return recommendedPaymentMethodTypes.contains(.link)
+        // Either Link is an allowed Payment Method in the elements/sessions response, or passthrough mode (Link as a Card PM) is allowed
+        orderedPaymentMethodTypes.contains(.link) || linkPassthroughModeEnabled
+    }
+
+    var linkPassthroughModeEnabled: Bool {
+        linkSettings?.passthroughModeEnabled ?? false
     }
 
     var supportsLinkCard: Bool {
-        return supportsLink && (linkFundingSources?.contains(.card) ?? false)
+        supportsLink && (linkFundingSources?.contains(.card) ?? false) || linkPassthroughModeEnabled
     }
 
-    var onlySupportsLinkBank: Bool {
-        return supportsLink && (linkFundingSources == [.bankAccount])
+    var linkFundingSources: Set<LinkSettings.FundingSource>? {
+        linkSettings?.fundingSources
     }
 
+    var disableLinkSignup: Bool {
+        linkSettings?.disableSignup ?? false
+    }
+
+    var linkPopupWebviewOption: LinkSettings.PopupWebviewOption {
+        linkSettings?.popupWebviewOption ?? .shared
+    }
+
+    func countryCode(overrideCountry: String?) -> String? {
+#if DEBUG
+        if let overrideCountry {
+            return overrideCountry
+        }
+#endif
+        return countryCode
+    }
+
+    var linkFlags: [String: Bool] {
+        linkSettings?.linkFlags ?? [:]
+    }
+}
+
+extension Intent {
     var callToAction: ConfirmButton.CallToActionType {
         switch self {
-        case .paymentIntent(_, let paymentIntent):
+        case .paymentIntent(let paymentIntent):
             return .pay(amount: paymentIntent.amount, currency: paymentIntent.currency)
         case .setupIntent:
             return .setup
-        case .deferredIntent(_, let intentConfig):
+        case .deferredIntent(let intentConfig):
             switch intentConfig.mode {
             case .payment(let amount, let currency, _, _):
                 return .pay(amount: amount, currency: currency)
@@ -35,21 +63,5 @@ extension Intent {
                 return .setup
             }
         }
-    }
-
-    var linkFundingSources: Set<LinkSettings.FundingSource>? {
-        return elementsSession.linkSettings?.fundingSources
-    }
-
-    var linkPopupWebviewOption: LinkSettings.PopupWebviewOption {
-        return elementsSession.linkSettings?.popupWebviewOption ?? .shared
-    }
-
-    var countryCode: String? {
-        return elementsSession.countryCode
-    }
-
-    var merchantCountryCode: String? {
-        return elementsSession.merchantCountryCode
     }
 }

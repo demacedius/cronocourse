@@ -28,13 +28,13 @@ final class PickerFieldView: UIView {
     private lazy var toolbar = DoneButtonToolbar(delegate: self, showCancelButton: true, theme: theme)
     private lazy var textField: PickerTextField = {
         let textField = PickerTextField()
-        // Input views are not supported on Catalyst
-#if !targetEnvironment(macCatalyst)
+        // Input views are not supported on Catalyst (and are non-optimal on visionOS)
+#if !targetEnvironment(macCatalyst) && !canImport(CompositorServices)
         textField.inputView = pickerView
 #endif
         textField.adjustsFontForContentSizeCategory = true
         textField.font = theme.fonts.subheadline
-#if !STP_BUILD_FOR_VISION
+#if !canImport(CompositorServices)
         textField.inputAccessoryView = toolbar
 #endif
         textField.delegate = self
@@ -138,8 +138,8 @@ final class PickerFieldView: UIView {
         self.isOptional = isOptional
         super.init(frame: .zero)
         addAndPinSubview(hStackView, directionalLayoutMargins: hasPadding ? ElementsUI.contentViewInsets : .zero)
-//      On Catalyst, add the picker view as a subview instead of an input view.
-        #if targetEnvironment(macCatalyst)
+//      On Catalyst/visionOS, add the picker view as a subview instead of an input view.
+        #if targetEnvironment(macCatalyst) || canImport(CompositorServices)
         addAndPinSubview(pickerView, directionalLayoutMargins: ElementsUI.contentViewInsets)
         #endif
         layer.borderColor = theme.colors.border.cgColor
@@ -166,7 +166,7 @@ final class PickerFieldView: UIView {
         }
     }
 
-#if !STP_BUILD_FOR_VISION
+#if !canImport(CompositorServices)
     override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
         super.traitCollectionDidChange(previousTraitCollection)
         layer.borderColor = theme.colors.border.cgColor
@@ -179,7 +179,7 @@ final class PickerFieldView: UIView {
         guard isUserInteractionEnabled, !isHidden, self.point(inside: point, with: event) else {
             return nil
         }
-        #if targetEnvironment(macCatalyst)
+        #if targetEnvironment(macCatalyst) || canImport(CompositorServices)
         // Forward all events within our bounds to the button
         return pickerView
         #else

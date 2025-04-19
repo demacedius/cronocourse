@@ -1,6 +1,6 @@
 {
   "name": "cloud_functions",
-  "version": "4.7.6",
+  "version": "5.4.0",
   "summary": "A Flutter plugin allowing you to use Firebase Cloud Functions.",
   "description": "A Flutter plugin allowing you to use Firebase Cloud Functions.",
   "homepage": "https://firebase.google.com/docs/functions",
@@ -11,21 +11,21 @@
   "source": {
     "path": "."
   },
-  "source_files": "Classes/**/*.{h,m}",
-  "public_header_files": "Classes/*.h",
+  "source_files": "cloud_functions/Sources/**/*.swift",
   "platforms": {
-    "ios": "11.0"
+    "ios": "13.0"
   },
+  "swift_versions": "5.0",
   "dependencies": {
     "Flutter": [],
     "firebase_core": [],
     "Firebase/Functions": [
-      "10.25.0"
+      "11.10.0"
     ]
   },
   "static_framework": true,
   "pod_target_xcconfig": {
-    "GCC_PREPROCESSOR_DEFINITIONS": "LIBRARY_VERSION=\\@\\\"4.7.6\\\" LIBRARY_NAME=\\@\\\"flutter-fire-fn\\\"",
     "DEFINES_MODULE": "YES"
-  }
+  },
+  "swift_version": "5.0"
 }

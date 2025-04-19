@@ -14,9 +14,13 @@
 
 "BSB number" = "Numero ng BSB";
 
+"Bank account •••• %@" = "Account sa bangko •••• %@";
+
 "Billing address is same as shipping" = "Ang address sa billing ay kapareho ng sa pagpapadala";
 
 "Cancel" = "Kanselahin";
+
+"Card brand" = "Brand ng card";
 
 "City" = "Siyudad";
 
@@ -82,6 +86,8 @@
 
 "Phone" = "Telepono";
 
+"Phone number" = "Numero ng telepono";
+
 "Postal code" = "Postal code";
 
 "Prefecture" = "Prefecture";
@@ -90,13 +96,15 @@
 
 "Remove" = "Alisin";
 
-"Remove bank account" = "Alisin ang account sa bangko";
+"Remove bank account?" = "Alisin ang account sa bangko?";
 
-"Remove bank account ending in %@" = "Alisin ang account sa bangko na nagtatapos sa %@";
+"Remove card" = "Alisin ang kard";
 
 "Search" = "Maghanap";
 
 "Select card brand (optional)" = "Pumili ng brand ng kard (opsyonal)";
+
+"Sort code" = "Sort code";
 
 "State" = "State";
 
@@ -109,6 +117,8 @@
 "The ID number you entered is incomplete." = "Ang numero ng ID na inilagay mo ay kulang.";
 
 "The account number you entered is incomplete." = "Ang numero ng account na inilagay mo ay kulang.";
+
+"The sort code you entered is invalid." = "Ang sort code na inilagay mo ay hindi valid.";
 
 "Town or city" = "Bayan o siyudad";
 

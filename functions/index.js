@@ -1,8 +1,9 @@
 const { onCall } = require("firebase-functions/v2/https");
 const { onDocumentUpdated } = require("firebase-functions/v2/firestore");
 const { initializeApp } = require("firebase-admin/app");
+require('dotenv').config
 const admin = require("firebase-admin");
-const stripe = require("stripe")("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"); // ta clé stripe
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY); // ta clé stripe
 
 initializeApp();
 const db = admin.firestore();

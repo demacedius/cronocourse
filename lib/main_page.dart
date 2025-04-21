@@ -29,6 +29,7 @@ class _MainPageState extends State<MainPage> {
     _selectedIndex = widget.initialIndex;
   }
 
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: _pages[_selectedIndex],

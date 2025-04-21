@@ -1,0 +1,2 @@
+/Users/demacedoanthony/Desktop/cronocourse/android/app/.cxx/RelWithDebInfo/4x606k1o/x86/CMakeFiles/edit_cache.dir
+/Users/demacedoanthony/Desktop/cronocourse/android/app/.cxx/RelWithDebInfo/4x606k1o/x86/CMakeFiles/rebuild_cache.dir

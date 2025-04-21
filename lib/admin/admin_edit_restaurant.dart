@@ -31,13 +31,15 @@ class RestaurantAdminPage extends StatelessWidget {
       body: StreamBuilder<QuerySnapshot>(
         stream: restaurantRef.snapshots(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData)
+          if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
+          }
 
           final docs = snapshot.data!.docs;
 
-          if (docs.isEmpty)
+          if (docs.isEmpty) {
             return const Center(child: Text("Aucun restaurant"));
+          }
 
           return ListView.builder(
             itemCount: docs.length,

@@ -11,19 +11,29 @@ import 'firebase_options.dart';
 import 'auth_gate.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-
-
 void main() async {
+  print('🔍 Starting app initialization...');
   WidgetsFlutterBinding.ensureInitialized();
+  print('✅ Flutter binding initialized');
+  
   await dotenv.load(fileName: ".env");
-  Stripe.publishableKey = 'pk_live_51P28qVP1Eugt8srj8UCHaI9raplneZfMOGq8urtNSxa9DeQj8thLydePe5UazsymUvUSEyK6xaZffRlZ9A9PiUgb00VMvMB2Qr';
+  print('✅ Loaded .env file');
+  
+  Stripe.publishableKey = dotenv.env['STRIPE_PUBLISHABLE_KEY'] ?? '';
+  print('🔑 Stripe key status: ${Stripe.publishableKey.isEmpty ? "Missing" : "Present"}');
+  if (Stripe.publishableKey.isEmpty) {
+    print('⚠️ Aucune clé Stripe définie dans .env');
+  }
 
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  print('🔥 Initializing Firebase...');
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  print('✅ Firebase initialized');
 
+  print('🔔 Setting up notifications...');
   await NotificationsApi.initNotifications();
+  print('✅ Notifications initialized');
 
+  print('🚀 Running app...');
   runApp(const ChronoCourseApp());
 }
 
@@ -67,8 +77,8 @@ class _ChronoCourseAppState extends State<ChronoCourseApp> {
     });
 
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      print('➡️ L’utilisateur a ouvert la notification');
-      // Ici tu pourrais faire une navigation si nécessaire
+      print('➡️ User opened the notification');
+      // Navigation could be added here if needed
     });
   }
 

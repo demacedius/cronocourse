@@ -9,7 +9,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:611086892183:android:b2df19b8a081fadad77dd2",
         "android_client_info": {
-          "package_name": "com.example.chronocourse"
+          "package_name": "com.chronocourse.app"
         }
       },
       "oauth_client": [],
@@ -28,7 +28,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:611086892183:android:19879017798abb5dd77dd2",
         "android_client_info": {
-          "package_name": "com.example.cronocourse"
+          "package_name": "com.chronocourse.app"
         }
       },
       "oauth_client": [],

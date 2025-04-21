@@ -26,7 +26,7 @@ class ProductList extends StatelessWidget {
 
         final filteredProducts =
             allProducts.where((doc) {
-              final data = doc.data() as Map<String, dynamic>;
+              final data = doc.data();
               final name = data['name']?.toString().toLowerCase() ?? '';
               final category = data['category'] ?? '';
 
@@ -53,7 +53,7 @@ class ProductList extends StatelessWidget {
             mainAxisSpacing: 16,
           ),
           itemBuilder: (context, index) {
-            final data = filteredProducts[index].data() as Map<String, dynamic>;
+            final data = filteredProducts[index].data();
             final isOutOfStock = (data['quantity'] ?? 0) <= 0;
 
             final productCard = Stack(

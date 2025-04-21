@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 
 import 'utils/logout.dart';
 import 'widget/product_filter.dart';
-import 'widget/products_category_list.dart';
 import 'widget/switch_button.dart';
 
 class HomePage extends StatefulWidget {
@@ -45,7 +44,13 @@ class _HomePageState extends State<HomePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16.0),
+                child: Image.asset(
+                  'lib/assets/image/23.jpg', // ou Image.network('https://url-du-logo')
+                  fit: BoxFit.contain
+                ),
+              ),
               SwitchButtons(
                 selected: selectedView,
                 onChanged: (value) {
@@ -73,7 +78,6 @@ class _HomePageState extends State<HomePage> {
                   searchText: searchText,
                   selectedCategory: selectedCategory,
                 ),
-                
               ] else ...[
                 Text(
                   "Nos restaurant Partenaires",

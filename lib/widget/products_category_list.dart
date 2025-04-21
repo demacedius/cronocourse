@@ -45,7 +45,7 @@ class CategorizedProductList extends StatelessWidget {
                 scrollDirection: Axis.horizontal,
                 itemCount: products.length,
                 itemBuilder: (context, index) {
-                  final data = products[index].data() as Map<String, dynamic>;
+                  final data = products[index].data();
 
                   return GestureDetector(
                     onTap:

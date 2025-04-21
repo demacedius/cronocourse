@@ -1,3 +1,4 @@
+import 'package:cronocourse/admin/adminCategoriePage.dart';
 import 'package:flutter/material.dart';
 
 import '../main_page.dart';
@@ -61,6 +62,12 @@ class AdminDashboard extends StatelessWidget {
               icon: Icons.receipt_long,
               label: "Commandes",
               destination: const AdminOrdersPage(),
+            ),
+            _buildTile(
+              context,
+              icon: Icons.list,
+              label: "Catégorie",
+              destination: const AdminCategoryPage(),
             ),
           ],
         ),

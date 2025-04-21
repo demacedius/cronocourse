@@ -1,100 +1,126 @@
-const { onCall } = require("firebase-functions/v2/https");
-const { onDocumentUpdated } = require("firebase-functions/v2/firestore");
-const { initializeApp } = require("firebase-admin/app");
-require('dotenv').config
-const admin = require("firebase-admin");
-const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY); // ta clé stripe
+const functions = require('firebase-functions/v2');
+const admin = require('firebase-admin');
+const express = require('express');
+const stripe = require('stripe');
 
-initializeApp();
-const db = admin.firestore();
-const messaging = admin.messaging();
+// Initialize Firebase Admin
+admin.initializeApp();
 
-// Fonction de paiement
-exports.initStripePayment = onCall({ region: 'europe-west1' }, async (request) => {
-  const amount = request.data.amount;
+// Initialize Express app
+const app = express();
 
-  if (!amount || amount <= 0) {
-    throw new Error("Montant invalide.");
-  }
-
-  const paymentIntent = await stripe.paymentIntents.create({
-    amount: Math.round(amount * 100),
-    currency: 'eur',
-    automatic_payment_methods: { enabled: true },
-    metadata: { source: 'app' },
-  });
-
-  return {
-    clientSecret: paymentIntent.client_secret,
-  };
-});
-
-// Notification à la mise à jour du statut
-exports.notifyStatusChange = onDocumentUpdated("users/{userId}/orderedProduct/{orderId}", async (event) => {
-  const beforeStatus = event.data.before.data()?.status;
-  const afterStatus = event.data.after.data()?.status;
-
-  if (beforeStatus === afterStatus) return;
-
-  const userId = event.params.userId;
-  const tokenDoc = await db.collection("addFCMtoken").doc(userId).get();
-  const fcmToken = tokenDoc.data()?.token;
-
-  if (!fcmToken) {
-    console.log(`Aucun token FCM pour l'utilisateur ${userId}`);
-    return;
-  }
-
-  const payload = {
-    notification: {
-      title: "Commande mise à jour",
-      body: `Le statut de votre commande est : ${afterStatus}`,
-    },
-    token: fcmToken,
-  };
-
+// Stripe Payment Function
+exports.initStripePayment = functions.https.onCall(async (request) => {
   try {
-    const response = await messaging.send(payload);
-    console.log("✅ Notification envoyée :", response);
+    console.log('Starting payment process...');
+    const { amount } = request.data;
+    console.log('Amount received:', amount);
+    
+    const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+    console.log('Stripe key present:', !!stripeSecretKey);
+    
+    if (!stripeSecretKey) {
+      console.error('Stripe secret key not configured');
+      throw new functions.https.HttpsError('internal', 'Stripe secret key not configured');
+    }
+
+    // Initialize Stripe with the secret key
+    const stripeClient = stripe(stripeSecretKey);
+    console.log('Stripe client initialized');
+
+    // Create a PaymentIntent
+    console.log('Creating payment intent...');
+    const paymentIntent = await stripeClient.paymentIntents.create({
+      amount: Math.round(amount * 100), // amount in cents
+      currency: 'eur',
+      automatic_payment_methods: {
+        enabled: true,
+      },
+    });
+    console.log('Payment intent created:', paymentIntent.id);
+
+    return { 
+      success: true, 
+      clientSecret: paymentIntent.client_secret 
+    };
   } catch (error) {
-    console.error("❌ Erreur d'envoi :", error);
+    console.error('Stripe payment error:', error);
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      type: error.type
+    });
+    throw new functions.https.HttpsError('internal', error.message || 'Payment processing failed');
   }
 });
 
-const { onDocumentCreated } = require("firebase-functions/v2/firestore");
+// Category Update Function
+exports.handleCategoryUpdate = functions.firestore.onDocumentUpdated(
+  'category/{categoryId}',
+  async (event) => {
+    const newData = event.data?.after.data();
+    const previousData = event.data?.before.data();
 
-// Notification pour les administrateurs à chaque nouvelle commande
-exports.notifyAdminOnNewOrder = onDocumentCreated("users/{userId}/orderedProduct/{orderId}", async (event) => {
-  const userId = event.params.userId;
+    // Vérifier si le nom de la catégorie a changé
+    if (newData?.name !== previousData?.name) {
+      console.log(`Category name changed from ${previousData?.name} to ${newData?.name}`);
 
-  // Récupère tous les utilisateurs avec admin == true
-  const adminSnapshot = await db.collection("users").where("admin", "==", true).get();
-  const tokens = [];
+      // Récupérer tous les produits de l'ancienne catégorie
+      const productsRef = admin.firestore().collection('product');
+      const productsSnapshot = await productsRef
+        .where('category', '==', previousData?.name)
+        .get();
 
-  for (const adminDoc of adminSnapshot.docs) {
-    const adminId = adminDoc.id;
-    const tokenSnap = await db.collection("addFCMtoken").doc(adminId).get();
-    const token = tokenSnap.data()?.token;
-    if (token) tokens.push(token);
+      console.log(`Found ${productsSnapshot.size} products to update`);
+
+      // Mettre à jour les produits en batch
+      const batch = admin.firestore().batch();
+      productsSnapshot.docs.forEach((doc) => {
+        batch.update(doc.ref, { 
+          category: newData?.name,
+          categoryId: event.params.categoryId
+        });
+      });
+
+      try {
+        await batch.commit();
+        console.log(`Successfully updated ${productsSnapshot.size} products`);
+      } catch (error) {
+        console.error('Error updating products:', error);
+        throw error;
+      }
+    }
   }
+);
 
-  if (tokens.length === 0) {
-    console.log("Aucun administrateur avec token FCM.");
-    return;
+// Order Status Change Function
+exports.handleOrderStatusChange = functions.firestore.onDocumentUpdated(
+  'orders/{orderId}',
+  async (event) => {
+    const newData = event.data?.after.data();
+    const previousData = event.data?.before.data();
+
+    if (newData?.status !== previousData?.status) {
+      // Add your notification logic here
+      console.log(`Order ${event.params.orderId} status changed to ${newData?.status}`);
+    }
   }
+);
 
-  const payload = {
-    notification: {
-      title: "Nouvelle commande 🛒",
-      body: `Un client a passé une nouvelle commande.`,
-    },
-    tokens: tokens,
-  };
-
-  try {
-    const response = await messaging.sendEachForMulticast(payload);
-    console.log("✅ Notification envoyée aux admins :", response);
-  } catch (error) {
-    console.error("❌ Erreur d'envoi aux admins :", error);
+// New Order Function
+exports.handleNewOrder = functions.firestore.onDocumentCreated(
+  'orders/{orderId}',
+  async (event) => {
+    const orderData = event.data?.data();
+    // Add your notification logic here
+    console.log(`New order created: ${event.params.orderId}`);
   }
+);
+
+// Health check endpoint
+app.get('/', (req, res) => {
+  res.status(200).send('OK');
 });
+
+// Export the Express app as a Firebase Function
+exports.api = functions.https.onRequest(app);

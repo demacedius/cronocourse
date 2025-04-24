@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'utils/strip_payement.dart';
 import 'widget/dropdown_delivery.dart';
+import 'widget/address_selection.dart';
 
 class CartPage extends StatefulWidget {
   const CartPage({super.key});
@@ -17,6 +18,30 @@ class _CartPageState extends State<CartPage> {
   String? selectedCity;
   double deliveryFee = 0.0;
   double cartTotal = 0.0;
+  Map<String, dynamic>? userInfo;
+  Map<String, dynamic>? selectedDeliveryAddress;
+  Map<String, dynamic>? billingAddress;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserInfo();
+  }
+
+  Future<void> _loadUserInfo() async {
+    if (user == null) return;
+    
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user!.uid)
+        .get();
+    
+    if (userDoc.exists) {
+      setState(() {
+        userInfo = userDoc.data();
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,149 +56,174 @@ class _CartPageState extends State<CartPage> {
 
     return Scaffold(
       appBar: AppBar(title: const Text("Mon Panier")),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: cartRef.snapshots(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      body: SafeArea(
+        child: StreamBuilder<QuerySnapshot>(
+          stream: cartRef.snapshots(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-          final docs = snapshot.data!.docs;
-          double cartTotal = 0;
+            final docs = snapshot.data!.docs;
+            double cartTotal = 0;
+            final onlyRestaurant = docs.every((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              return data['type'] == 'restaurant';
+            });
 
-          for (final doc in docs) {
-            final data = doc.data() as Map<String, dynamic>;
-            cartTotal += (data['total'] ?? 0);
-          }
+            for (final doc in docs) {
+              final data = doc.data() as Map<String, dynamic>;
+              cartTotal += (data['total'] ?? 0);
+            }
 
-          return Column(
-            children: [
-              Expanded(
-                child: ListView.builder(
-                  itemCount: docs.length,
-                  itemBuilder: (context, index) {
-                    final doc = docs[index];
-                    final data = doc.data() as Map<String, dynamic>;
+            return Column(
+              children: [
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        ListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: docs.length,
+                          itemBuilder: (context, index) {
+                            final doc = docs[index];
+                            final data = doc.data() as Map<String, dynamic>;
 
-                    return ListTile(
-                      leading: Image.network(
-                        data['image'],
-                        width: 50,
-                        height: 50,
-                        fit: BoxFit.cover,
-                      ),
-                      title: Text(data['name']),
-                      subtitle: Text(
-                        '${data['quantity']} x ${data['price']} € = ${data['total'].toStringAsFixed(2)} €',
-                      ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            onPressed:
-                                () => _updateQuantity(
-                                  doc.id,
-                                  data['quantity'] - 1,
-                                ),
-                            icon: const Icon(Icons.remove_circle_outline),
-                          ),
-                          IconButton(
-                            onPressed:
-                                () => _updateQuantity(
-                                  doc.id,
-                                  data['quantity'] + 1,
-                                ),
-                            icon: const Icon(Icons.add_circle_outline),
-                          ),
-                          IconButton(
-                            onPressed: () => _deleteItem(doc.id),
-                            icon: const Icon(Icons.delete, color: Colors.red),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    DeliveryZoneDropdown(
-                      selectedCity: selectedCity,
-                      onChanged: (city, courseFee, restaurantFee) {
-                        final onlyRestaurant = docs.every((doc) {
-                          final data = doc.data() as Map<String, dynamic>;
-                          return data['type'] == 'restaurant';
-                        });
-
-                        setState(() {
-                          selectedCity = city;
-                          deliveryFee =
-                              onlyRestaurant ? restaurantFee : courseFee;
-                        });
-                      },
-                    ),
-                    Text(
-                      "Panier : ${cartTotal.toStringAsFixed(2)} €",
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 16,
-                      ),
-                    ),
-                    const SizedBox(height: 5),
-                    Text(
-                      "Livraison : ${deliveryFee.toStringAsFixed(2)} €",
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 16,
-                      ),
-                    ),
-                    const SizedBox(height: 5),
-
-                    Text(
-                      "Total : ${(cartTotal + deliveryFee).toStringAsFixed(2)} €",
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 16,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    ElevatedButton(
-                      onPressed: () {
-                        final total = cartTotal + deliveryFee;
-
-                        if (selectedCity == null) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                "Choisissez une ville de livraison",
+                            return ListTile(
+                              leading: Image.network(
+                                data['image'],
+                                width: 50,
+                                height: 50,
+                                fit: BoxFit.cover,
                               ),
+                              title: Text(data['name']),
+                              subtitle: Text(
+                                '${data['quantity']} x ${data['price']} € = ${data['total'].toStringAsFixed(2)} €',
+                              ),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    onPressed: () => _updateQuantity(doc.id, data['quantity'] - 1),
+                                    icon: const Icon(Icons.remove_circle_outline),
+                                  ),
+                                  IconButton(
+                                    onPressed: () => _updateQuantity(doc.id, data['quantity'] + 1),
+                                    icon: const Icon(Icons.add_circle_outline),
+                                  ),
+                                  IconButton(
+                                    onPressed: () => _deleteItem(doc.id),
+                                    icon: const Icon(Icons.delete, color: Colors.red),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                        if (onlyRestaurant) ...[
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: AddressSelection(
+                              isRequired: true,
+                              onAddressSelected: (deliveryAddress) {
+                                setState(() {
+                                  selectedDeliveryAddress = deliveryAddress;
+                                });
+                              },
                             ),
-                          );
-                          return;
-                        }
-                        
-                        
-                        payWithStripe(
-                          amount: total,
-                          context: context,
-                          onSuccess: _submitOrder, // 👈 fonction à définir
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        foregroundColor: Colors.white,
-                        minimumSize: const Size.fromHeight(50),
-                      ),
-                      child: const Text("Commander maintenant"),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: DeliveryZoneDropdown(
+                            selectedCity: selectedCity,
+                            onChanged: (city, courseFee, restaurantFee) {
+                              setState(() {
+                                selectedCity = city;
+                                deliveryFee = onlyRestaurant ? restaurantFee : courseFee;
+                              });
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
-              ),
-            ],
-          );
-        },
+                Container(
+                  color: Colors.white,
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        "Panier : ${cartTotal.toStringAsFixed(2)} €",
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        "Livraison : ${deliveryFee.toStringAsFixed(2)} €",
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        "Total : ${(cartTotal + deliveryFee).toStringAsFixed(2)} €",
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        onPressed: () {
+                          final total = cartTotal + deliveryFee;
+
+                          if (selectedCity == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text("Choisissez une ville de livraison"),
+                              ),
+                            );
+                            return;
+                          }
+
+                          if (onlyRestaurant && selectedDeliveryAddress == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text("Choisissez une adresse de livraison"),
+                              ),
+                            );
+                            return;
+                          }
+                          
+                          payWithStripe(
+                            amount: total,
+                            context: context,
+                            onSuccess: _submitOrder,
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size.fromHeight(50),
+                        ),
+                        child: const Text("Commander maintenant"),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -211,13 +261,14 @@ class _CartPageState extends State<CartPage> {
     final userRef = FirebaseFirestore.instance.collection('users').doc(uid);
     final cartRef = userRef.collection('cart');
     final orderRef = userRef.collection('orderedProduct');
+    final ordersRef = FirebaseFirestore.instance.collection('orders');
 
     final cartSnapshot = await cartRef.get();
 
     if (cartSnapshot.docs.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Votre panier est vide")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Votre panier est vide")),
+      );
       return;
     }
 
@@ -241,7 +292,7 @@ class _CartPageState extends State<CartPage> {
         (sum, item) => sum + (item['total'] ?? 0),
       );
 
-      await orderRef.add({
+      final orderData = {
         'products': courseItems,
         'type': 'course',
         'order_total': totalCourse + deliveryFee,
@@ -250,7 +301,14 @@ class _CartPageState extends State<CartPage> {
         'delivery_city': selectedCity,
         'created_at': FieldValue.serverTimestamp(),
         'status': 'en cours',
-      });
+        'user_info': userInfo,
+      };
+
+      // Ajouter à la collection orderedProduct
+      await orderRef.add(orderData);
+      
+      // Ajouter à la collection orders
+      await ordersRef.add(orderData);
 
       // Décrémenter les stocks
       await _decrementProductQuantities(courseItems);
@@ -263,13 +321,23 @@ class _CartPageState extends State<CartPage> {
         (sum, item) => sum + (item['total'] ?? 0),
       );
 
-      await orderRef.add({
+      final orderData = {
         'products': restaurantItems,
         'type': 'restaurant',
         'order_total': totalRestaurant,
+        'delivery_fee': deliveryFee,
+        'delivery_city': selectedCity,
+        'delivery_address': selectedDeliveryAddress,
         'created_at': FieldValue.serverTimestamp(),
         'status': 'en cours',
-      });
+        'user_info': userInfo,
+      };
+
+      // Ajouter à la collection orderedProduct
+      await orderRef.add(orderData);
+      
+      // Ajouter à la collection orders
+      await ordersRef.add(orderData);
     }
 
     // 🗑️ Vider le panier
@@ -277,9 +345,9 @@ class _CartPageState extends State<CartPage> {
       await doc.reference.delete();
     }
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text("Commandes enregistrées ✅")));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Commandes enregistrées ✅")),
+    );
 
     Navigator.of(context).pop();
   }
@@ -290,8 +358,7 @@ class _CartPageState extends State<CartPage> {
     final firestore = FirebaseFirestore.instance;
 
     for (final product in productList) {
-      final productId =
-          product['id']; // Assure-toi d’avoir cet ID dans ton panier
+      final productId = product['id'];
       final quantityPurchased = product['quantity'];
 
       final productRef = firestore.collection('products').doc(productId);

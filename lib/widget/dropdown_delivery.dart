@@ -28,6 +28,7 @@ class DeliveryZoneDropdown extends StatelessWidget {
               value: data['name'],
               child: Text(
                 "${data['name']} - Courses: ${data['price']} € / Resto: ${data['restaurant_fees']} €",
+                style: const TextStyle(fontSize: 14),
               ),
             );
           }).toList(),

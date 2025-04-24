@@ -1,4 +1,5 @@
 import 'package:cronocourse/admin/adminCategoriePage.dart';
+import 'package:cronocourse/admin/delivery_fees_page.dart';
 import 'package:flutter/material.dart';
 
 import '../main_page.dart';
@@ -6,6 +7,7 @@ import 'product_admin_list.dart';
 import 'admin_edit_restaurant.dart';
 import 'user_admin_page.dart';
 import 'admin_order_page.dart';
+import '../restaurant/restaurant_orders_page.dart';
 
 class AdminDashboard extends StatelessWidget {
   const AdminDashboard({super.key});
@@ -68,6 +70,18 @@ class AdminDashboard extends StatelessWidget {
               icon: Icons.list,
               label: "Catégorie",
               destination: const AdminCategoryPage(),
+            ),
+            _buildTile(
+              context,
+              icon: Icons.list,
+              label: "Frais de livraison",
+              destination: const DeliveryFeesPage(),
+            ),
+            _buildTile(
+              context,
+              icon: Icons.restaurant_menu,
+              label: "Commandes restaurant",
+              destination: const RestaurantOrdersPage(),
             ),
           ],
         ),

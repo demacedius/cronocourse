@@ -80,7 +80,7 @@ class _HomePageState extends State<HomePage> {
                 ),
               ] else ...[
                 Text(
-                  "Nos restaurant Partenaires",
+                  "Nos restaurants partenaires",
                   style: TextStyle(fontWeight: FontWeight.w700, fontSize: 24),
                 ),
                 const SizedBox(height: 12),

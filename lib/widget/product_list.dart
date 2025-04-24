@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../product_detail.dart';
 
-class ProductList extends StatelessWidget {
+class ProductList extends StatefulWidget {
   final String searchText;
   final String selectedCategory;
 
@@ -12,6 +12,33 @@ class ProductList extends StatelessWidget {
     required this.searchText,
     required this.selectedCategory,
   });
+
+  @override
+  State<ProductList> createState() => _ProductListState();
+}
+
+class _ProductListState extends State<ProductList> {
+  List<String> _categories = ['tous'];
+  bool _isLoadingCategories = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCategories();
+  }
+
+  Future<void> _loadCategories() async {
+    try {
+      final snapshot = await FirebaseFirestore.instance.collection('category').get();
+      setState(() {
+        _categories = ['tous']..addAll(snapshot.docs.map((doc) => doc['name'].toString()));
+        _isLoadingCategories = false;
+      });
+    } catch (e) {
+      print('Erreur lors du chargement des catégories: $e');
+      setState(() => _isLoadingCategories = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -30,9 +57,9 @@ class ProductList extends StatelessWidget {
               final name = data['name']?.toString().toLowerCase() ?? '';
               final category = data['category'] ?? '';
 
-              final matchSearch = name.contains(searchText.toLowerCase());
+              final matchSearch = name.contains(widget.searchText.toLowerCase());
               final matchCategory =
-                  selectedCategory == 'tous' || category == selectedCategory;
+                  widget.selectedCategory == 'tous' || category == widget.selectedCategory;
 
               return matchSearch && matchCategory;
             }).toList();
@@ -145,7 +172,9 @@ class ProductList extends StatelessWidget {
                               context,
                               MaterialPageRoute(
                                 builder:
-                                    (_) => ProductDetailPage(product: data),
+                                    (_) => ProductDetailPage(
+                                      product: filteredProducts[index].data(),
+                                    ),
                               ),
                             ),
                         child: productCard,

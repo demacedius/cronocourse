@@ -43,7 +43,7 @@ class _MainPageState extends State<MainPage> {
           setState(() => _selectedIndex = index);
         },
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Accueil'),
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Acceuil'),
           BottomNavigationBarItem(icon: Icon(Icons.receipt_long), label: 'Mes commandes'),
           BottomNavigationBarItem(icon: Icon(Icons.shopping_cart), label: 'Panier'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profil'),

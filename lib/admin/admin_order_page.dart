@@ -99,7 +99,7 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
                           Text(
                             "Utilisateur : ${order['userName'] ?? order['userEmail'] ?? order['userId']}",
                           ),
-                          Text("Email de l'utilisateur: ${order['userEmail']}"),
+                          Text("Email de l'utilisateur : ${order['userEmail']}"),
                           Text(
                             "Date : ${createdAt?.toLocal().toString().split('.')[0] ?? 'N/A'}",
                           ),

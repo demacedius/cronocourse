@@ -90,10 +90,19 @@ class _ProductAdminFormState extends State<ProductAdminForm> {
       if (picked != null) {
         final file = File(picked.path);
         final compressedFile = await _compressImage(file);
-        final fileName = path.basename(picked.path);
-        final ref = FirebaseStorage.instance.ref().child('images/$fileName');
+        final uniqueId = DateTime.now().millisecondsSinceEpoch.toString();
+        final fileName = 'product_$uniqueId.jpg';
+        
+        final ref = FirebaseStorage.instance.ref().child('product/$fileName');
+        
+        final metadata = SettableMetadata(
+          contentType: 'image/jpeg',
+          customMetadata: {
+            'uploaded_at': DateTime.now().toIso8601String(),
+          },
+        );
 
-        await ref.putFile(compressedFile);
+        await ref.putFile(compressedFile, metadata);
         final url = await ref.getDownloadURL();
 
         setState(() {

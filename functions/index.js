@@ -109,13 +109,104 @@ exports.handleOrderStatusChange = functions.firestore.onDocumentUpdated(
 
 // New Order Function
 exports.handleNewOrder = functions.firestore.onDocumentCreated(
-  'orders/{orderId}',
+  'users/{userId}/orderedProduct/{orderId}',
   async (event) => {
     const orderData = event.data?.data();
-    // Add your notification logic here
     console.log(`New order created: ${event.params.orderId}`);
+
+    // Récupérer les produits de la commande
+    const productsRef = admin.firestore().collection('product');
+    const products = await Promise.all(
+      orderData.products.map(async (product) => {
+        const productDoc = await productsRef.doc(product.id).get();
+        return {
+          ...product,
+          restaurantId: productDoc.data()?.restaurantId
+        };
+      })
+    );
+
+    // Récupérer les IDs des restaurants concernés
+    const restaurantIds = [...new Set(products.map(p => p.restaurantId))];
+
+    // Récupérer les restaurateurs associés à ces restaurants
+    const restaurateursSnapshot = await admin.firestore()
+      .collection('users')
+      .where('isRestaurateur', '==', true)
+      .where('restaurantId', 'in', restaurantIds)
+      .get();
+
+    // Récupérer les tokens FCM des restaurateurs
+    const tokens = [];
+    for (const doc of restaurateursSnapshot.docs) {
+      const tokenDoc = await admin.firestore()
+        .collection('addFCMtoken')
+        .doc(doc.id)
+        .get();
+      
+      if (tokenDoc.exists) {
+        tokens.push(tokenDoc.data()?.token);
+      }
+    }
+
+    if (tokens.length > 0) {
+      // Envoyer la notification
+      const message = {
+        notification: {
+          title: 'Nouvelle commande !',
+          body: `Une nouvelle commande a été passée (${orderData?.total}€)`,
+        },
+        data: {
+          orderId: event.params.orderId,
+          type: 'new_order'
+        },
+        tokens: tokens,
+      };
+
+      try {
+        const response = await admin.messaging().sendMulticast(message);
+        console.log('Notifications envoyées:', response.successCount);
+      } catch (error) {
+        console.error('Erreur lors de l\'envoi des notifications:', error);
+      }
+    }
   }
 );
+
+// Function to update existing users
+exports.updateExistingUsers = functions.https.onCall(async (data, context) => {
+  try {
+    console.log('Starting user update process...');
+    
+    const usersRef = admin.firestore().collection('users');
+    const usersSnapshot = await usersRef.get();
+    
+    console.log(`Found ${usersSnapshot.size} users to update`);
+    
+    const batch = admin.firestore().batch();
+    let count = 0;
+    
+    usersSnapshot.docs.forEach(doc => {
+      const data = doc.data();
+      if (data.isRestaurateur === undefined) {
+        batch.update(doc.ref, { isRestaurateur: false });
+        count++;
+      }
+    });
+    
+    if (count > 0) {
+      await batch.commit();
+      console.log(`Successfully updated ${count} users`);
+      return { success: true, updatedCount: count };
+    } else {
+      console.log('No users needed updating');
+      return { success: true, updatedCount: 0 };
+    }
+  } catch (error) {
+    console.error('Error updating users:', error);
+    throw new functions.https.HttpsError('internal', error.message);
+  }
+});
 
 // Health check endpoint
 app.get('/', (req, res) => {

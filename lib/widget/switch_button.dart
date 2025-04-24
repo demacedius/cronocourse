@@ -41,7 +41,7 @@ class SwitchButtons extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             Text(
-              label,
+              label == "course" ? "Courses" : "Restaurants",
               style: TextStyle(
                 color: isSelected ? Colors.white : Colors.black,
                 fontWeight: FontWeight.w500,

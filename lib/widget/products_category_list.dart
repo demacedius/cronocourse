@@ -53,7 +53,9 @@ class CategorizedProductList extends StatelessWidget {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => ProductDetailPage(product: data),
+                              builder: (_) => ProductDetailPage(
+                                product: products[index].data(),
+                              ),
                             ),
                           ),
                         },

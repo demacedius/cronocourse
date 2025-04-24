@@ -63,5 +63,7 @@
 	<string>Cette application nécessite l&apos;accès à la caméra pour fonctionner correctement.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Cette application nécessite l&apos;accès à votre bibliothèque photo pour fonctionner correctement.</string>
+	<key>UIViewControllerBasedStatusBarAppearance</key>
+	<false/>
 </dict>
 </plist>

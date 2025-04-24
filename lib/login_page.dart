@@ -63,6 +63,7 @@ class _LoginSignupPageState extends State<LoginSignupPage>
       'city': '',
       'created_time': FieldValue.serverTimestamp(),
       'admin': false,
+      'isRestaurateur': false,
     });
 
     print("Utilisateur enregistré dans Firestore");
